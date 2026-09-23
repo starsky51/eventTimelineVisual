@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "allowJs": false,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "target": "es2022",
+        "module": "commonjs",
+        "sourceMap": true,
+        "outDir": "./.tmp/build/",
+        "declaration": true,
+        "lib": [
+            "es2022",
+            "dom"
+        ],
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true
+    },
+    "files": [
+        "./src/visual.ts"
+    ]
+}

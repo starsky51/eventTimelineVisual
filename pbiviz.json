@@ -1,0 +1,26 @@
+{
+    "visual": {
+        "name": "eventTimelineVisual",
+        "displayName": "Event Timeline Visual",
+        "guid": "eventTimelineVisualBCBED78BF12D4688B9DEC560BE118532",
+        "visualClassName": "Visual",
+        "version": "1.0.32.0",
+        "description": "A custom Power BI visual to display events on an interactive timeline.",
+        "supportUrl": "https://example.com",
+        "gitHubUrl": ""
+    },
+    "apiVersion": "5.11.0",
+    "author": {
+        "name": "Dave Vickery",
+        "email": "david.vickery@liverpoolft.nhs.uk"
+    },
+    "assets": {
+        "icon": "assets/icon.png"
+    },
+    "externalJS": [],
+    "style": "style/visual.less",
+    "capabilities": "capabilities.json",
+    "dependencies": null,
+    "stringResources": [],
+    "version": "1.0.28.0"
+}

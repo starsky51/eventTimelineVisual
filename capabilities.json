@@ -1,0 +1,556 @@
+{
+    "dataRoles": [
+        {
+            "displayName": "Top Level Group",
+            "name": "topLevelGroup",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Group",
+            "name": "group",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Start Date",
+            "name": "startDate",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Start Time",
+            "name": "startTime",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "End Date",
+            "name": "endDate",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "End Time",
+            "name": "endTime",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Event Type",
+            "name": "eventType",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Content",
+            "name": "content",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Color",
+            "name": "color",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Group Color",
+            "name": "groupColor",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Group Order",
+            "name": "groupOrder",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Event Class",
+            "name": "eventClass",
+            "kind": "GroupingOrMeasure"
+        },
+        {
+            "displayName": "Calculation Fields",
+            "name": "calculationFields",
+            "kind": "GroupingOrMeasure"
+        }
+    ],
+    "objects": {
+        "timeline": {
+            "displayName": "Timeline",
+            "properties": {
+                "showFutureEvents": {
+                    "displayName": "Future events",
+                    "description": "Turn the future events label and overlay on or off",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "minZoom": {
+                    "displayName": "Maximum Zoom Level",
+                    "description": "Maximum zoom level limit for the main timeline",
+                    "type": {
+                        "enumeration": [
+                            {
+                                "value": "1hour",
+                                "displayName": "1 Hour"
+                            },
+                            {
+                                "value": "6hours",
+                                "displayName": "6 Hours"
+                            },
+                            {
+                                "value": "12hours",
+                                "displayName": "12 Hours"
+                            },
+                            {
+                                "value": "day",
+                                "displayName": "Day"
+                            },
+                            {
+                                "value": "week",
+                                "displayName": "Week"
+                            },
+                            {
+                                "value": "month",
+                                "displayName": "Month"
+                            }
+                        ]
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        },
+        "markers": {
+            "displayName": "Markers",
+            "properties": {
+                "colorTheme": {
+                    "displayName": "Color Theme",
+                    "description": "Color theme for timeline markers",
+                    "type": {
+                        "enumeration": [
+                            {
+                                "value": "standard",
+                                "displayName": "Standard"
+                            },
+                            {
+                                "value": "highContrast",
+                                "displayName": "High Contrast"
+                            },
+                            {
+                                "value": "nhs",
+                                "displayName": "NHS"
+                            },
+                            {
+                                "value": "blues",
+                                "displayName": "Blues"
+                            },
+                            {
+                                "value": "pastels",
+                                "displayName": "Pastels"
+                            },
+                            {
+                                "value": "warm",
+                                "displayName": "Warm"
+                            },
+                            {
+                                "value": "eventColor",
+                                "displayName": "Event Color"
+                            }
+                        ]
+                    }
+                },
+                "colorLevel": {
+                    "displayName": "Color Level",
+                    "description": "Set marker colors at Event Type level or Group and Event Type level",
+                    "type": {
+                        "enumeration": [
+                            {
+                                "value": "eventType",
+                                "displayName": "Event Type"
+                            },
+                            {
+                                "value": "groupAndEventType",
+                                "displayName": "Group and Event Type"
+                            }
+                        ]
+                    }
+                },
+                "markerHeight": {
+                    "displayName": "Marker Height",
+                    "description": "Height of timeline markers in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "padding": {
+                    "displayName": "Padding",
+                    "description": "Vertical padding around markers in pixels, dictating the swimlane height",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "crossFilter": {
+                    "displayName": "Cross-filter other visuals",
+                    "description": "When enabled, selecting a marker will filter other visuals on the report page",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "keepRangeMarkers": {
+                    "displayName": "Keep vis-range markers",
+                    "description": "Keep vis-range markers as vis-range even when the width is small enough to warrant a vis-point marker",
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
+        "tooltips": {
+            "displayName": "Tooltips",
+            "properties": {
+                "show": {
+                    "displayName": "Show Tooltips",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        },
+        "miniTimeline": {
+            "displayName": "Mini Timeline",
+            "properties": {
+                "show": {
+                    "displayName": "Show Mini Timeline",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "height": {
+                    "displayName": "Size",
+                    "description": "Height of the mini timeline in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        },
+        "content": {
+            "displayName": "Content",
+            "properties": {
+                "showFieldNames": {
+                    "displayName": "Show field names",
+                    "description": "Show field names in the content section",
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
+        "detailsPanel": {
+            "displayName": "Details",
+            "properties": {
+                "show": {
+                    "displayName": "Show Details Panel",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "initialWidth": {
+                    "displayName": "Initial Width",
+                    "description": "Initial width of the details panel in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "padding": {
+                    "displayName": "Padding",
+                    "description": "Padding inside the details panel in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "headerFontFamily": {
+                    "displayName": "Header Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "headerFontSize": {
+                    "displayName": "Header Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                },
+                "emptyMessage": {
+                    "displayName": "No Selection Message",
+                    "type": {
+                        "text": true
+                    }
+                },
+                "showFieldNames": {
+                    "displayName": "Show field names",
+                    "description": "Show field names in the content section",
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
+        "groupOrderCard": {
+            "displayName": "Groups",
+            "properties": {
+                "collapseSubgroupsOnLoad": {
+                    "displayName": "Collapse subgroups on load",
+                    "description": "Collapse subgroups by default when the visual loads",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        },
+        "topBar": {
+            "displayName": "Toolbar",
+            "properties": {
+                "showSearch": {
+                    "displayName": "Show Text Search",
+                    "description": "Show or hide the text search box on the top bar",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "padding": {
+                    "displayName": "Padding",
+                    "description": "Padding around the toolbar in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tooltips": {
+        "supportedTypes": {
+            "default": true,
+            "canvas": true
+        },
+        "supportEnhancedTooltips": true
+    },
+    "supportsHighlight": true,
+    "supportsMultiVisualSelection": true,
+    "supportsKeyboardFocus": true,
+    "supportsLandingPage": true,
+    "sorting": {
+        "default": {}
+    },
+    "dataViewMappings": [
+        {
+            "conditions": [
+                {
+                    "topLevelGroup": {
+                        "max": 1
+                    },
+                    "group": {
+                        "max": 2
+                    },
+                    "startDate": {
+                        "max": 1
+                    },
+                    "startTime": {
+                        "max": 1
+                    },
+                    "endDate": {
+                        "max": 1
+                    },
+                    "endTime": {
+                        "max": 1
+                    },
+                    "eventType": {
+                        "max": 1
+                    },
+                    "content": {},
+                    "color": {
+                        "max": 1
+                    },
+                    "groupColor": {
+                        "max": 1
+                    },
+                    "groupOrder": {
+                        "max": 1
+                    },
+                    "eventClass": {
+                        "max": 1
+                    },
+                    "calculationFields": {}
+                }
+            ],
+            "table": {
+                "rows": {
+                    "dataReductionAlgorithm": {
+                        "top": {
+                            "count": 30000
+                        }
+                    },
+                    "select": [
+                        {
+                            "for": {
+                                "in": "topLevelGroup"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "group"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "startDate"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "startTime"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "endDate"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "endTime"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "eventType"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "content"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "color"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "groupColor"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "groupOrder"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "eventClass"
+                            }
+                        },
+                        {
+                            "for": {
+                                "in": "calculationFields"
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "privileges": []
+}
