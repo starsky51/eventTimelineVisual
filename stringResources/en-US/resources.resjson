@@ -1,0 +1,17 @@
+{
+    "detailsPanel_emptyMessage": "Click a marker to view details",
+    "detailsPanel_header": "Event Details",
+    "detailsPanel_eventsSelected": "{0} events selected",
+    "detailsPanel_eventSelected": "1 event selected",
+    "detailsPanel_noEventsSelected": "0 events selected",
+    "detailsPanel_seeMore": "see more...",
+    "detailsPanel_seeLess": "see less...",
+    "timelineFitButton_title": "Show entire timeline",
+    "status_noData": "Please assign fields to the timeline visual from the Visualizations pane.",
+    "status_noTable": "The visual expects table data. Please ensure fields are mapped to the visual's data roles.",
+    "status_loading": "Loading, please wait...",
+    "status_tooManyResults": "Too many results have been returned and you should select a filter value to continue.",
+    "tooltip_clickToViewMore": "Click marker to view full details",
+    "subgroups_collapseAll": "Collapse All",
+    "subgroups_expandAll": "Expand All"
+}
