@@ -332,7 +332,7 @@ export function formatContentFieldValue(val: any, col: any): string {
     if (val instanceof Date) {
         const parsed = parseDate(val);
         if (parsed && !isNaN(parsed.getTime())) {
-            return moment(parsed).format('DD/MM/YYYY HH:mm');
+            return moment(parsed).format('DD MMM YYYY HH:mm');
         }
     }
 
@@ -340,7 +340,7 @@ export function formatContentFieldValue(val: any, col: any): string {
     if (isDateCol && typeof val === 'number') {
         const parsed = parseDate(val);
         if (parsed && !isNaN(parsed.getTime())) {
-            return moment(parsed).format('DD/MM/YYYY HH:mm');
+            return moment(parsed).format('DD MMM YYYY HH:mm');
         }
     }
 
@@ -351,13 +351,13 @@ export function formatContentFieldValue(val: any, col: any): string {
             if (isDateCol) {
                 const parsed = parseDate(str);
                 if (parsed && !isNaN(parsed.getTime())) {
-                    return moment(parsed).format('DD/MM/YYYY HH:mm');
+                    return moment(parsed).format('DD MMM YYYY HH:mm');
                 }
             } else if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.test(str)
                 || /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}(?:[T\s]\d{1,2}:\d{2}(?::\d{2})?)?$/.test(str)) {
                 const parsed = parseDate(str);
                 if (parsed && !isNaN(parsed.getTime())) {
-                    return moment(parsed).format('DD/MM/YYYY HH:mm');
+                    return moment(parsed).format('DD MMM YYYY HH:mm');
                 }
             }
         }

@@ -37,6 +37,10 @@ export class DetailsPanelManager {
     public detailsHeaderCount: HTMLElement;
     public detailsPanelBody: HTMLElement;
     public detailsPanelWidth: number | null = null;
+    public lastPointerX: number | null = null;
+    public lastPointerY: number | null = null;
+    public currentGlowingCard: HTMLElement | null = null;
+    public currentRenderContext: DetailsPanelRenderContext | null = null;
 
     private container: HTMLElement;
     private contentContainer: HTMLElement;
@@ -89,6 +93,18 @@ export class DetailsPanelManager {
 
         this.contentContainer.appendChild(this.detailsPanel);
 
+        this.detailsPanelBody.addEventListener("mousemove", (e: MouseEvent) => {
+            this.lastPointerX = e.clientX;
+            this.lastPointerY = e.clientY;
+        }, { passive: true });
+
+        this.detailsPanelBody.addEventListener("scroll", () => {
+            if (this.currentRenderContext && this.lastPointerX !== null && this.lastPointerY !== null) {
+                this.clearCardHoverGlow();
+                this.updateCardGlowUnderPointer(this.lastPointerX, this.lastPointerY, this.currentRenderContext);
+            }
+        }, { passive: true });
+
         this.detailsPanel.addEventListener("mousedown", (e) => {
             e.stopPropagation();
         });
@@ -96,7 +112,10 @@ export class DetailsPanelManager {
             e.stopPropagation();
         });
         this.detailsPanel.addEventListener("mouseleave", () => {
+            this.clearCardHoverGlow();
             onClearGlow();
+            this.lastPointerX = null;
+            this.lastPointerY = null;
         });
 
         const handleDelegatedAnchorClick = (e: MouseEvent) => {
@@ -186,6 +205,37 @@ export class DetailsPanelManager {
         }
     }
 
+    public clearCardHoverGlow(): void {
+        if (this.currentGlowingCard) {
+            this.currentGlowingCard.classList.remove('hover-glow');
+            this.currentGlowingCard = null;
+        }
+    }
+
+    private updateCardGlowUnderPointer(x: number, y: number, ctx: DetailsPanelRenderContext): void {
+        const el = document.elementFromPoint(x, y);
+        const card = el ? (el.closest('.details-item-card') as HTMLElement | null) : null;
+        if (card && this.detailsPanelBody.contains(card)) {
+            const itemId = (card as any).__itemId;
+            if (this.currentGlowingCard !== card) {
+                if (this.currentGlowingCard) {
+                    this.currentGlowingCard.classList.remove('hover-glow');
+                }
+                this.currentGlowingCard = card;
+                card.classList.add('hover-glow');
+                if (itemId !== undefined) {
+                    ctx.setMarkerHoverGlow(itemId, true);
+                }
+            }
+        } else {
+            if (this.currentGlowingCard) {
+                this.currentGlowingCard.classList.remove('hover-glow');
+                this.currentGlowingCard = null;
+                ctx.clearAllMarkerHoverGlow();
+            }
+        }
+    }
+
     public renderDetailsEmptyState(emptyMessage: string, searchTerm?: string): HTMLElement {
         const emptyContainer = document.createElement("div");
         emptyContainer.className = "details-empty-state";
@@ -230,6 +280,7 @@ export class DetailsPanelManager {
     ): HTMLElement {
         const card = document.createElement("div");
         card.className = "details-item-card";
+        (card as any).__itemId = item.id;
 
         const rawEventClass = (item.eventClass || item.originalClass || '').trim();
         const eventClasses = rawEventClass ? rawEventClass.split(/\s+/).filter(Boolean) : [];
@@ -246,9 +297,18 @@ export class DetailsPanelManager {
         }
 
         card.addEventListener("mouseenter", () => {
+            if (this.currentGlowingCard && this.currentGlowingCard !== card) {
+                this.currentGlowingCard.classList.remove('hover-glow');
+            }
+            this.currentGlowingCard = card;
+            card.classList.add('hover-glow');
             ctx.setMarkerHoverGlow(item.id, true);
         });
         card.addEventListener("mouseleave", () => {
+            card.classList.remove('hover-glow');
+            if (this.currentGlowingCard === card) {
+                this.currentGlowingCard = null;
+            }
             ctx.setMarkerHoverGlow(item.id, false);
         });
 
@@ -341,7 +401,7 @@ export class DetailsPanelManager {
         }
 
         // 2. Date subheader
-        const dateStr = formatEventDate(item.start, item.end) || item.dateString || '';
+        const dateStr = formatEventDate(item.start, item.end, item.isOngoing) || item.dateString || '';
         if (dateStr) {
             const dateEl = document.createElement("div");
             dateEl.className = "details-item-date";
@@ -403,6 +463,8 @@ export class DetailsPanelManager {
     }
 
     public renderDetailsPanel(ctx: DetailsPanelRenderContext, resetScroll: boolean = false): void {
+        this.clearCardHoverGlow();
+        this.currentRenderContext = ctx;
         ctx.clearAllMarkerHoverGlow();
         if (!this.detailsPanel || !this.detailsPanelBody) return;
 

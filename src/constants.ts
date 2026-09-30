@@ -40,3 +40,22 @@ export const COLOR_MAP: Record<string, string> = {
     coral: '#d96e48',
     salmon: '#d47467'
 };
+
+export const FONT_SIZE_OFFSETS = {
+    xAxis: -1,          // Timeline X-axis: base - 1
+    groupHeader: 0,    // Groups: base + 0
+    miniTimeline: -2,  // Mini Timeline: base - 2
+    topBar: 1,         // Toolbar: base + 1
+    detailsHeader: 0,  // Details Header: base + 0
+    detailsBody: 0,    // Details Content: base + 0
+    tooltip: 0         // Tooltip: base + 0
+} as const;
+
+export const PADDING_OFFSETS = {
+    topBar: -8,  // Toolbar padding: base (11) - 11 = 0 px
+    details: -4   // Details panel padding: base (11) - 1 = 10 px
+} as const;
+
+export const PADDING_VALUES = {
+    marker: 4,   // Swimlane/marker vertical padding: hard coded to 4
+} as const; 

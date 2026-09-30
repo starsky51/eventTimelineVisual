@@ -516,19 +516,28 @@ export function combineDateAndTime(dateVal: any, timeVal: any): Date | undefined
     );
 }
 
-export function formatEventDate(start: any, end?: any): string {
+export function formatEventDate(start: any, end?: any, isOngoing?: boolean): string {
     if (!start) return '';
     const startD = parseDate(start);
     if (!startD || isNaN(startD.getTime())) return '';
-    const startStr = moment(startD).format('DD/MM/YYYY HH:mm');
+    const startStr = moment(startD).format('DD MMM YYYY HH:mm');
+    if (isOngoing) {
+        return `${startStr} - Ongoing`;
+    }
     if (!end) return startStr;
     const endD = parseDate(end);
-    if (!endD || isNaN(endD.getTime()) || startD.getTime() === endD.getTime()) {
+    if (!endD || isNaN(endD.getTime())) {
         return startStr;
     }
-    let endStr = moment(endD).format('DD/MM/YYYY HH:mm');
+    if (endD.getFullYear() >= 9999) {
+        return `${startStr} - Ongoing`;
+    }
+    if (startD.getTime() === endD.getTime()) {
+        return startStr;
+    }
+    let endStr = moment(endD).format('DD MMM YYYY HH:mm');
     if (moment(startD).isSame(moment(endD), 'day')) {
-       endStr = moment(endD).format('HH:mm');
+        endStr = moment(endD).format('HH:mm');
     }
     return `${startStr} - ${endStr}`;
 }
@@ -561,8 +570,7 @@ export function isDateColumn(col: any): boolean {
 }
 
 /**
- * Formats a date value into "dd MMM yyyy" format (e.g. "05 Jan 2023").
- * Assumes GMT unless an explicit time zone is specified.
+ * Formats a date value into "dd MMM yyyy HH:mm" format (e.g. "05 Jan 2023 14:30").
  */
 export function formatDateAsDDMMMYYYY(val: any): string {
     if (val === null || val === undefined || String(val).trim().length === 0) {
@@ -570,7 +578,7 @@ export function formatDateAsDDMMMYYYY(val: any): string {
     }
     const d = parseDate(val);
     if (d && !isNaN(d.getTime())) {
-        return moment(d).format('DD MMM YYYY');
+        return moment(d).format('DD MMM YYYY HH:mm');
     }
     return String(val).trim();
 }

@@ -29,69 +29,35 @@
 import { formattingSettings } from "powerbi-visuals-utils-formattingmodel";
 
 import FormattingSettingsCard = formattingSettings.SimpleCard;
+import FormattingSettingsGroup = formattingSettings.Group;
+import FormattingSettingsCompositeCard = formattingSettings.CompositeCard;
 import FormattingSettingsSlice = formattingSettings.Slice;
 import FormattingSettingsModel = formattingSettings.Model;
 
 /**
- * Timeline & X-Axis Formatting Card
+ * General Formatting Card
  */
-class TimelineCardSettings extends FormattingSettingsCard {
-    showFutureEvents = new formattingSettings.ToggleSwitch({
-        name: "showFutureEvents",
-        displayName: "Future events",
-        value: true
+class GeneralCardSettings extends FormattingSettingsCard {
+    fontFamily = new formattingSettings.FontPicker({
+        name: "fontFamily",
+        displayName: "Font",
+        value: "Segoe UI Light, sans-serif"
     });
 
-    minZoom = new formattingSettings.AutoDropdown({
-        name: "minZoom",
-        displayName: "Minimum Zoom Level",
-        value: "day"
-    });
-
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "X-Axis Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 11,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
+    fontSize = new formattingSettings.NumUpDown({
+        name: "fontSize",
+        displayName: "Base Font Size",
+        value: 11,
+        options: {
+            minValue: {
+                type: powerbi.visuals.ValidatorType.Min,
+                value: 7
+            },
+            maxValue: {
+                type: powerbi.visuals.ValidatorType.Max,
+                value: 30
             }
-        })
-    });
-
-    name: string = "timeline";
-    displayName: string = "Timeline";
-    slices: Array<FormattingSettingsSlice> = [this.showFutureEvents, this.minZoom, this.font];
-}
-
-/**
- * Markers Formatting Card
- */
-class MarkersCardSettings extends FormattingSettingsCard {
-    colorTheme = new formattingSettings.AutoDropdown({
-        name: "colorTheme",
-        displayName: "Color Theme",
-        value: "standard"
-    });
-
-    colorLevel = new formattingSettings.AutoDropdown({
-        name: "colorLevel",
-        displayName: "Color Level",
-        value: "eventType"
+        }
     });
 
     markerHeight = new formattingSettings.NumUpDown({
@@ -105,98 +71,121 @@ class MarkersCardSettings extends FormattingSettingsCard {
             },
             maxValue: {
                 type: powerbi.visuals.ValidatorType.Max,
-                value: 80
+                value: 40
             }
         }
     });
 
-    padding = new formattingSettings.NumUpDown({
-        name: "padding",
-        displayName: "Padding",
-        value: 6,
-        options: {
-            minValue: {
-                type: powerbi.visuals.ValidatorType.Min,
-                value: 0
-            },
-            maxValue: {
-                type: powerbi.visuals.ValidatorType.Max,
-                value: 50
-            }
-        }
-    });
-
-    crossFilter = new formattingSettings.ToggleSwitch({
-        name: "crossFilter",
-        displayName: "Cross-filter other visuals",
-        value: false
+    minZoom = new formattingSettings.AutoDropdown({
+        name: "minZoom",
+        displayName: "Maximum Zoom Level",
+        value: "day"
     });
 
     keepRangeMarkers = new formattingSettings.ToggleSwitch({
         name: "keepRangeMarkers",
-        displayName: "Keep vis-range markers",
+        displayName: "Keep Range Markers",
         value: false
     });
 
-    name: string = "markers";
-    displayName: string = "Markers";
-    slices: Array<FormattingSettingsSlice> = [this.colorTheme, this.colorLevel, this.markerHeight, this.padding, this.crossFilter, this.keepRangeMarkers];
+    name: string = "general";
+    displayName: string = "General";
+    slices: Array<FormattingSettingsSlice> = [this.fontFamily, this.fontSize, this.markerHeight, this.minZoom, this.keepRangeMarkers];
 }
 
 /**
- * Groups Formatting Card
+ * Style Formatting Card (formerly Markers)
  */
-class GroupOrderCardSettings extends FormattingSettingsCard {
+class StyleCardSettings extends FormattingSettingsCard {
+    colorTheme = new formattingSettings.AutoDropdown({
+        name: "colorTheme",
+        displayName: "Colour Theme",
+        value: "standard"
+    });
+
+    colorLevel = new formattingSettings.AutoDropdown({
+        name: "colorLevel",
+        displayName: "Colour Change Mode",
+        value: "eventType"
+    });
+
+    name: string = "markers";
+    displayName: string = "Style";
+    slices: Array<FormattingSettingsSlice> = [this.colorTheme, this.colorLevel];
+}
+
+/**
+ * Miscellaneous Formatting Card
+ */
+export class MiscellaneousCardSettings extends FormattingSettingsCard {
     collapseSubgroupsOnLoad = new formattingSettings.ToggleSwitch({
         name: "collapseSubgroupsOnLoad",
-        displayName: "Collapse subgroups on load",
+        displayName: "Collapse Subgroups on Load",
         value: true
     });
 
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "Group Header Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 11,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
+    crossFilter = new formattingSettings.ToggleSwitch({
+        name: "crossFilter",
+        displayName: "Cross-Filter Other Visuals",
+        value: false
     });
 
-    name: string = "groupOrderCard";
-    displayName: string = "Groups";
-    slices: Array<FormattingSettingsSlice> = [this.collapseSubgroupsOnLoad, this.font];
+    name: string = "miscellaneous";
+    displayName: string = "Miscellaneous";
+    slices: Array<FormattingSettingsSlice> = [this.collapseSubgroupsOnLoad, this.crossFilter];
 }
 
 /**
- * Mini Timeline Formatting Card
+ * Main Elements Formatting Group (for top-level elements options)
  */
-class MiniTimelineCardSettings extends FormattingSettingsCard {
-    show = new formattingSettings.ToggleSwitch({
-        name: "show",
-        displayName: "Show",
+export class MainElementsGroupSettings extends FormattingSettingsGroup {
+    constructor() {
+        super({} as any);
+    }
+
+    showFutureEvents = new formattingSettings.ToggleSwitch({
+        name: "showFutureEvents",
+        displayName: "Show Future Events Overlay",
         value: true
     });
+
+    showTooltips = new formattingSettings.ToggleSwitch({
+        name: "show",
+        displayName: "Show Tooltips",
+        value: true
+    });
+
+    showSearch = new formattingSettings.ToggleSwitch({
+        name: "showSearch",
+        displayName: "Show Text Search",
+        value: true
+    });
+
+    name: string = "elements";
+    displayName: string | undefined = undefined;
+    slices: Array<FormattingSettingsSlice> = [this.showFutureEvents, this.showTooltips, this.showSearch];
+}
+
+/**
+ * Mini Timeline Formatting Group
+ */
+export class MiniTimelineGroupSettings extends FormattingSettingsGroup {
+    constructor() {
+        super({} as any);
+    }
+
+    show = new formattingSettings.ToggleSwitch({
+        name: "show",
+        displayName: "Show Mini Timeline",
+        value: true
+    });
+
+    public topLevelSlice = this.show;
 
     height = new formattingSettings.NumUpDown({
         name: "height",
-        displayName: "Size",
-        value: 90,
+        displayName: "Mini Timeline Height",
+        value: 80,
         options: {
             minValue: {
                 type: powerbi.visuals.ValidatorType.Min,
@@ -209,106 +198,77 @@ class MiniTimelineCardSettings extends FormattingSettingsCard {
         }
     });
 
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "Axis Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 10,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
-    });
-
     name: string = "miniTimeline";
     displayName: string = "Mini Timeline";
-    slices: Array<FormattingSettingsSlice> = [this.show, this.height, this.font];
+    collapsible: boolean = true;
+    slices: Array<FormattingSettingsSlice> = [this.height];
 }
 
 /**
- * Top Bar Formatting Card
+ * Top Level Group Formatting Group
  */
-class TopBarCardSettings extends FormattingSettingsCard {
-    showSearch = new formattingSettings.ToggleSwitch({
-        name: "showSearch",
-        displayName: "Show Text Search",
+export class TopLevelGroupGroupSettings extends FormattingSettingsGroup {
+    constructor() {
+        super({} as any);
+    }
+
+    show = new formattingSettings.ToggleSwitch({
+        name: "show",
+        displayName: "Show Top Level Filter",
         value: true
     });
 
-    padding = new formattingSettings.NumUpDown({
-        name: "padding",
-        displayName: "Padding",
-        value: 0,
+    public topLevelSlice = this.show;
+
+    maxDistinctItems = new formattingSettings.NumUpDown({
+        name: "maxDistinctItems",
+        displayName: "Max Top Level Values",
+        value: 100,
         options: {
             minValue: {
                 type: powerbi.visuals.ValidatorType.Min,
-                value: 0
+                value: 1
             },
             maxValue: {
                 type: powerbi.visuals.ValidatorType.Max,
-                value: 50
+                value: 10000
             }
         }
     });
 
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "Toolbar Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 11,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
+    overflowMessage = new formattingSettings.TextInput({
+        name: "overflowMessage",
+        displayName: "Overflow message",
+        placeholder: "Too many results have been returned and you should select a filter value to continue.",
+        value: "Too many results have been returned and you should select a filter value to continue."
     });
 
-    name: string = "topBar";
-    displayName: string = "Toolbar";
-    slices: Array<FormattingSettingsSlice> = [this.showSearch, this.padding, this.font];
+    name: string = "topLevelGroupCard";
+    displayName: string = "Top Level Group";
+    collapsible: boolean = true;
+    slices: Array<FormattingSettingsSlice> = [this.maxDistinctItems, this.overflowMessage];
 }
 
 /**
- * Details Panel Formatting Card
+ * Details Panel Formatting Group
  */
-class DetailsPanelCardSettings extends FormattingSettingsCard {
+export class DetailsPanelGroupSettings extends FormattingSettingsGroup {
+    constructor() {
+        super({} as any);
+    }
+
     show = new formattingSettings.ToggleSwitch({
         name: "show",
-        displayName: "Show",
+        displayName: "Show Event Details",
         value: true
     });
+
+    public topLevelSlice = this.show;
 
     initialWidth = new formattingSettings.NumUpDown({
         name: "initialWidth",
         displayName: "Initial Width",
-        value: 240,
+        value: 300,
         options: {
             minValue: {
                 type: powerbi.visuals.ValidatorType.Min,
@@ -321,72 +281,6 @@ class DetailsPanelCardSettings extends FormattingSettingsCard {
         }
     });
 
-    padding = new formattingSettings.NumUpDown({
-        name: "padding",
-        displayName: "Padding",
-        value: 10,
-        options: {
-            minValue: {
-                type: powerbi.visuals.ValidatorType.Min,
-                value: 0
-            },
-            maxValue: {
-                type: powerbi.visuals.ValidatorType.Max,
-                value: 50
-            }
-        }
-    });
-
-    headerFont = new formattingSettings.FontControl({
-        name: "headerFont",
-        displayName: "Header Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "headerFontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "headerFontSize",
-            displayName: "Font Size",
-            value: 12,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
-    });
-
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "Details Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 12,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
-    });
-
     emptyMessage = new formattingSettings.TextInput({
         name: "emptyMessage",
         displayName: "No Selection Message",
@@ -397,68 +291,74 @@ class DetailsPanelCardSettings extends FormattingSettingsCard {
     showFieldNames = new formattingSettings.ToggleSwitch({
         name: "showFieldNames",
         displayName: "Show field names",
-        value: false
+        value: true
     });
 
     name: string = "detailsPanel";
     displayName: string = "Details";
-    slices: Array<FormattingSettingsSlice> = [this.show, this.initialWidth, this.padding, this.headerFont, this.font, this.emptyMessage, this.showFieldNames];
+    collapsible: boolean = true;
+    slices: Array<FormattingSettingsSlice> = [this.initialWidth, this.emptyMessage, this.showFieldNames];
 }
 
 /**
- * Tooltips Formatting Card
+ * Elements Parent Formatting Card
  */
-class TooltipsCardSettings extends FormattingSettingsCard {
-    show = new formattingSettings.ToggleSwitch({
-        name: "show",
-        displayName: "Show Tooltips",
-        value: true
-    });
+export class ElementsCardSettings extends FormattingSettingsCompositeCard {
+    name: string = "elements";
+    displayName: string = "Elements";
 
-    font = new formattingSettings.FontControl({
-        name: "font",
-        displayName: "Tooltip Font",
-        fontFamily: new formattingSettings.FontPicker({
-            name: "fontFamily",
-            displayName: "Font Family",
-            value: "Segoe UI, sans-serif"
-        }),
-        fontSize: new formattingSettings.NumUpDown({
-            name: "fontSize",
-            displayName: "Font Size",
-            value: 12,
-            options: {
-                minValue: {
-                    type: powerbi.visuals.ValidatorType.Min,
-                    value: 6
-                },
-                maxValue: {
-                    type: powerbi.visuals.ValidatorType.Max,
-                    value: 40
-                }
-            }
-        })
-    });
+    mainGroup = new MainElementsGroupSettings();
+    miniTimeline = new MiniTimelineGroupSettings();
+    topLevelGroup = new TopLevelGroupGroupSettings();
+    detailsPanel = new DetailsPanelGroupSettings();
 
-    name: string = "tooltips";
-    displayName: string = "Tooltips";
-    slices: Array<FormattingSettingsSlice> = [this.show, this.font];
+    // Friendly direct slice accessors
+    get showFutureEvents() { return this.mainGroup.showFutureEvents; }
+    get showTooltips() { return this.mainGroup.showTooltips; }
+    get showSearch() { return this.mainGroup.showSearch; }
+    get details(): DetailsPanelGroupSettings { return this.detailsPanel; }
+
+    groups: Array<FormattingSettingsGroup> = [
+        this.mainGroup,
+        this.miniTimeline,
+        this.topLevelGroup,
+        this.detailsPanel
+    ];
 }
 
+// Backward compatibility type aliases
+export type MarkersCardSettings = StyleCardSettings;
+export type MiniTimelineCardSettings = MiniTimelineGroupSettings;
+export type TopLevelGroupCardSettings = TopLevelGroupGroupSettings;
+export type DetailsPanelCardSettings = DetailsPanelGroupSettings;
+
 /**
-* visual settings model class
-*
-*/
+ * Visual formatting settings model class
+ */
 export class VisualFormattingSettingsModel extends FormattingSettingsModel {
     // Create formatting settings model formatting cards
-    timelineCard = new TimelineCardSettings();
-    markersCard = new MarkersCardSettings();
-    groupOrderCard = new GroupOrderCardSettings();
-    miniTimelineCard = new MiniTimelineCardSettings();
-    topBarCard = new TopBarCardSettings();
-    detailsPanelCard = new DetailsPanelCardSettings();
-    tooltipsCard = new TooltipsCardSettings();
-    cards = [this.timelineCard, this.markersCard, this.groupOrderCard, this.miniTimelineCard, this.topBarCard, this.detailsPanelCard, this.tooltipsCard];
+    generalCard = new GeneralCardSettings();
+    styleCard = new StyleCardSettings();
+    elementsCard = new ElementsCardSettings();
+    miscellaneousCard = new MiscellaneousCardSettings();
+
+    // Backward-compatible accessors
+    get markersCard(): StyleCardSettings { return this.styleCard; }
+    get timelineCard() { return { showFutureEvents: this.elementsCard.showFutureEvents, minZoom: this.generalCard.minZoom }; }
+    get groupOrderCard() { return { collapseSubgroupsOnLoad: this.miscellaneousCard.collapseSubgroupsOnLoad }; }
+    get miniTimelineCard(): MiniTimelineGroupSettings { return this.elementsCard.miniTimeline; }
+    get topBarCard() { return { showSearch: this.elementsCard.showSearch }; }
+    get topLevelGroupCard(): TopLevelGroupGroupSettings { return this.elementsCard.topLevelGroup; }
+    get detailsPanelCard(): DetailsPanelGroupSettings { return this.elementsCard.detailsPanel; }
+    get tooltipsCard() { return { show: this.elementsCard.showTooltips }; }
+
+    cards = [
+        this.generalCard,
+        this.styleCard,
+        this.elementsCard,
+        this.miscellaneousCard
+    ];
 }
+
 
 

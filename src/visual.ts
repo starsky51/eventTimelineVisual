@@ -26,7 +26,7 @@
 "use strict"; 
 
 import powerbi from "powerbi-visuals-api";
-import { FormattingSettingsService } from "powerbi-visuals-utils-formattingmodel";
+import { FormattingSettingsService } from "./formattingSettingsService";
 import "./../style/visual.less";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -57,7 +57,7 @@ import {
     ActiveSortInfo,
     GroupDateStats
 } from "./types";
-import { COLOR_MAP, SVG_NS } from "./constants";
+import { COLOR_MAP, SVG_NS, FONT_SIZE_OFFSETS, PADDING_OFFSETS, PADDING_VALUES } from "./constants";
 import {
     normalizeColor,
     extractDecorationClass,
@@ -393,7 +393,7 @@ export class Visual implements IVisual {
                 this.target,
                 this.contentContainer,
                 (key, fb) => this.getLocalizedString(key, fb),
-                (url) => this.openExternalUrl(url),
+                (url) => openExternalUrl(url, this.host),
                 () => this.clearAllMarkerHoverGlow(),
                 () => {
                     this.mainTimeline?.redraw();
@@ -568,6 +568,14 @@ export class Visual implements IVisual {
                     }
                 }
                 return origRangeOnDrag(event);
+            };
+
+            const origRangeWheel = range._onMouseWheel.bind(range);
+            range._onMouseWheel = (event: any) => {
+                if (event && (event.ctrlKey || event.metaKey)) {
+                    return;
+                }
+                return origRangeWheel(event);
             };
         }
         if ((this.mainTimeline as any)?.itemSet) {
@@ -1038,13 +1046,13 @@ export class Visual implements IVisual {
         // Tooltip listeners: identify when more than one marker is underneath the pointer
         this.mainTimeline.on('itemover', (properties: any) => {
             if (!properties || !properties.event) return;
-            this.showTooltipForPointer(properties.event.clientX, properties.event.clientY, properties.item);
+            this.tooltipManager.showTooltipForPointer(properties.event.clientX, properties.event.clientY, this.formattingSettings, this.lastUpdateOptions, properties.item);
         });
 
         this.mainTimelineContainer.addEventListener('mousemove', (event: MouseEvent) => {
             const isDown = (event.buttons > 0) || ((event as any).which > 0);
             if (isDown) {
-                this.hideTooltip(true);
+                this.tooltipManager.hideTooltip(true);
             }
             if (!isDown && (this.isMainTimelineDragging() || this.mainTimelinePointerDownPos !== null)) {
                 this.finishMainDrag(event);
@@ -1052,15 +1060,15 @@ export class Visual implements IVisual {
             if (this.isDrawingMiniTimeline || this.activeMiniDragBar || isDown) return;
             const centerPanel = (event.target as HTMLElement | null)?.closest('.vis-panel.vis-center');
             if (!centerPanel) {
-                this.hideTooltip();
+                this.tooltipManager.hideTooltip();
                 return;
             }
 
             const itemsUnder = this.getItemsUnderPointer(event.clientX, event.clientY);
             if (itemsUnder.length > 0) {
-                this.showTooltipForPointer(event.clientX, event.clientY);
+                this.tooltipManager.showTooltipForPointer(event.clientX, event.clientY, this.formattingSettings, this.lastUpdateOptions);
             } else {
-                this.hideTooltip();
+                this.tooltipManager.hideTooltip();
             }
         });
 
@@ -1070,11 +1078,11 @@ export class Visual implements IVisual {
             if (clientX != null && clientY != null) {
                 const itemsUnder = this.getItemsUnderPointer(clientX, clientY);
                 if (itemsUnder.length > 0) {
-                    this.showTooltipForPointer(clientX, clientY);
+                    this.tooltipManager.showTooltipForPointer(clientX, clientY, this.formattingSettings, this.lastUpdateOptions);
                     return;
                 }
             }
-            this.hideTooltip(true);
+            this.tooltipManager.hideTooltip(true);
         });
 
         this.mainTimelineContainer.addEventListener('mouseleave', (event: MouseEvent) => {
@@ -1082,14 +1090,15 @@ export class Visual implements IVisual {
             if (!isDown && (this.isMainTimelineDragging() || this.mainTimelinePointerDownPos !== null)) {
                 this.finishMainDrag(event);
             }
-            this.hideTooltip(true);
+            this.tooltipManager.hideTooltip(true);
         });
 
         this.mainTimelineContainer.addEventListener('wheel', (event: WheelEvent) => {
-            this.hideTooltip(true);
             if (event.ctrlKey || event.metaKey) {
                 event.preventDefault();
                 event.stopPropagation();
+                event.stopImmediatePropagation();
+                this.tooltipManager.hideTooltip(true);
 
                 let deltaY = event.deltaY;
                 if (event.deltaMode === 1) { // LINE
@@ -1117,11 +1126,13 @@ export class Visual implements IVisual {
                         this.currentMainTimelineScrollTop = leftEl.scrollTop;
                     }
                 }
+            } else {
+                this.tooltipManager.hideTooltip(true);
             }
-        }, { passive: false });
+        }, { capture: true, passive: false });
 
         this.mainTimeline.on('rangechange', (e: any) => {
-            this.hideTooltip(true);
+            this.tooltipManager.hideTooltip(true);
             this.isMainTimelineDraggingGesture = true;
             try {
                 if (this.selectState === 'none' && this.miniTimeline) {
@@ -1169,10 +1180,6 @@ export class Visual implements IVisual {
 
     private hideLoading(): void {
         this.statusOverlayManager.hideLoading();
-    }
-
-    private computeDataSignature(rows: any[], columns: any[], topLevelGroup: string | null, metadataColumns?: any[]): string {
-        return computeDataSignature(rows, columns, topLevelGroup, metadataColumns);
     }
 
     private showStatus(title: string, message: string, details?: string): void {
@@ -1547,61 +1554,6 @@ export class Visual implements IVisual {
         return { isHighContrast: false };
     }
 
-    private normalizeColor(rawColor: any, fallbackColor: string = '#3677a8'): string {
-        return normalizeColor(rawColor, fallbackColor, this.colorPalette);
-    }
-
-    private extractDecorationClass(eventClass: string | null | undefined, prefix: 'flag' | 'sash'): { color: string; className: string } | null {
-        return extractDecorationClass(eventClass, prefix, this.colorPalette);
-    }
-
-    private extractFlagClass(eventClass: string | null | undefined): { color: string; className: string } | null {
-        return extractFlagClass(eventClass, this.colorPalette);
-    }
-
-    private extractSashClass(eventClass: string | null | undefined): { color: string; className: string } | null {
-        return extractSashClass(eventClass, this.colorPalette);
-    }
-
-    private getItemSashFlagVars(eventClass: string | null | undefined): string {
-        return getItemSashFlagVars(eventClass, this.colorPalette);
-    }
-
-    private getRgbFromColor(rawColor: string): { r: number; g: number; b: number } {
-        return getRgbFromColor(rawColor, this.colorPalette);
-    }
-
-    private getReadableTextColorForBg(r: number, g: number, b: number): { textColor: string; textRgb: string } {
-        return getReadableTextColorForBg(r, g, b);
-    }
-
-    private updateTooltipCssVariables(markerColor: string, rgbStr: string, textColor: string, textRgb: string) {
-        this.tooltipManager.updateTooltipCssVariables(markerColor, rgbStr, textColor, textRgb);
-    }
-
-    private applyEnhancedTooltipStyles(markerColor: string, rgbStr: string, textColor: string) {
-        this.tooltipManager.applyEnhancedTooltipStyles(markerColor, rgbStr, textColor);
-    }
-
-    private openExternalUrl(url: string) {
-        openExternalUrl(url, this.host);
-    }
-
-    private bindAnchorLinkInteractions(a: HTMLAnchorElement) {
-        bindAnchorLinkInteractions(a, (url) => this.openExternalUrl(url));
-    }
-
-    private buildUrlFragment(text: string, ownerDoc: Document = document, bindInteractions: boolean = true): DocumentFragment {
-        return buildUrlFragment(text, ownerDoc, (url) => this.openExternalUrl(url), bindInteractions);
-    }
-
-    private renderHtmlContent(container: HTMLElement, content: string) {
-        renderHtmlContent(container, content, (url) => this.openExternalUrl(url));
-    }
-
-    private highlightSearchTermInElement(container: HTMLElement, term: string) {
-        highlightSearchTermInElement(container, term);
-    }
 
     private getMarkerElementsByItemId(itemId: any): HTMLElement[] {
         if (!this.mainTimelineContainer) return [];
@@ -1702,74 +1654,11 @@ export class Visual implements IVisual {
         }
     }
 
-    private sanitizeHtmlToText(content: string): string {
-        return sanitizeHtmlToText(content);
-    }
-
-    private formatEventDate(start: any, end?: any): string {
-        return formatEventDate(start, end);
-    }
-
-    private isDateColumn(col: any): boolean {
-        return isDateColumn(col);
-    }
-
-    private formatContentFieldValue(val: any, col: any): string {
-        return formatContentFieldValue(val, col);
-    }
-
-    private getItemContent(item: any): string {
-        return getItemContent(item, this.getShowFieldNames());
-    }
-
-    private formatContentForTooltip(content: string): string {
-        return formatContentForTooltip(content);
-    }
-
-    private getDeselectedMarkerColors(rawColor: string): { fill: string; border: string; text: string } {
-        return getDeselectedMarkerColors(rawColor, this.colorPalette);
-    }
-
-    private isTooltipsEnabled(): boolean {
-        return this.tooltipManager.isTooltipsEnabled(this.formattingSettings, this.lastUpdateOptions);
-    }
-
-    private isCanvasTooltipConfigured(): boolean {
-        return this.tooltipManager.isCanvasTooltipConfigured(this.formattingSettings, this.lastUpdateOptions);
-    }
-
-    private showEnhancedColorTooltip(
-        clientX: number,
-        clientY: number,
-        info: {
-            headerText: string;
-            dateStr: string;
-            contentVal: string;
-            markerColor: string;
-            eventClasses: string[];
-            flagInfo?: { color: string; className: string } | null;
-            sashInfo?: { color: string; className: string } | null;
-            rgb: { r: number; g: number; b: number };
-            moreCount?: number;
-        }
-    ): void {
-        this.tooltipManager.showEnhancedColorTooltip(clientX, clientY, info);
-    }
-
-    private hideEnhancedColorTooltip(): void {
-        this.tooltipManager.hideEnhancedColorTooltip();
-    }
-
-    private hideTooltip(immediately: boolean = false): void {
-        this.tooltipManager.hideTooltip(immediately);
-    }
-
-    private showTooltipForPointer(clientX: number, clientY: number, fallbackItemId?: any): void {
-        this.tooltipManager.showTooltipForPointer(clientX, clientY, this.formattingSettings, this.lastUpdateOptions, fallbackItemId);
-    }
 
     private isCrossFilterEnabled(): boolean {
-        return (this.formattingSettings as any)?.markersCard?.crossFilter?.value
+        return (this.formattingSettings as any)?.miscellaneousCard?.crossFilter?.value
+            ?? (this.formattingSettings as any)?.markersCard?.crossFilter?.value
+            ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.miscellaneous?.crossFilter
             ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.markers?.crossFilter
             ?? false;
     }
@@ -1811,9 +1700,6 @@ export class Visual implements IVisual {
         return false;
     }
 
-    private findMostRecentItemId(items: any[]): any {
-        return findMostRecentItemId(items);
-    }
 
     private clearDomSelectionClasses(): void {
         if (!this.mainTimelineContainer) return;
@@ -1885,28 +1771,42 @@ export class Visual implements IVisual {
         );
     }
 
-    private measureMaxTextWidth(strings: string[], font: string, fallbackCharWidth: number = 8.5): number {
-        return measureMaxTextWidth(strings, font, fallbackCharWidth);
-    }
 
-    private textContainsTerm(source: any, term: string): boolean {
-        return textContainsTerm(source, term);
-    }
-
-    private setElementCssVar(el: HTMLElement | null | undefined, name: string, value: string | null | undefined): void {
-        setElementCssVar(el, name, value);
+    private getGlobalFontSettings(): { fontFamily: string; baseFontSize: number } {
+        const generalCard = (this.formattingSettings as any)?.generalCard;
+        const generalObjects = (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.general;
+        const fontFamily = generalCard?.fontFamily?.value
+            ?? generalObjects?.fontFamily
+            ?? "Segoe UI, sans-serif";
+        const rawBaseSize = generalCard?.fontSize?.value
+            ?? generalObjects?.fontSize;
+        const baseFontSize = (rawBaseSize && Number(rawBaseSize) > 0) ? Number(rawBaseSize) : 11;
+        return {
+            fontFamily: String(fontFamily || "Segoe UI, sans-serif"),
+            baseFontSize: Math.max(6, Math.min(40, baseFontSize))
+        };
     }
 
     private getFontSettings(cardName: string, objectName: string, fontProp: string = 'font'): { fontFamily: string; fontSize: number } {
-        const card = (this.formattingSettings as any)?.[cardName];
-        const fontSlice = card?.[fontProp] || card;
-        const fontFamily = fontSlice?.fontFamily?.value
-            ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.[objectName]?.fontFamily
-            ?? '';
-        const rawSize = fontSlice?.fontSize?.value
-            ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.[objectName]?.fontSize;
-        const fontSize = (rawSize && Number(rawSize) > 0) ? Number(rawSize) : 0;
-        return { fontFamily: String(fontFamily || ''), fontSize };
+        const { fontFamily, baseFontSize } = this.getGlobalFontSettings();
+        let offset: number = 0;
+        if (cardName === 'timelineCard' || objectName === 'timeline') {
+            offset = FONT_SIZE_OFFSETS.xAxis;
+        } else if (cardName === 'groupOrderCard' || objectName === 'groupOrderCard') {
+            offset = FONT_SIZE_OFFSETS.groupHeader;
+        } else if (cardName === 'miniTimelineCard' || objectName === 'miniTimeline') {
+            offset = FONT_SIZE_OFFSETS.miniTimeline;
+        } else if (cardName === 'topBarCard' || objectName === 'topBar') {
+            offset = FONT_SIZE_OFFSETS.topBar;
+        } else if (fontProp === 'headerFont' || objectName === 'detailsPanelHeader') {
+            offset = FONT_SIZE_OFFSETS.detailsHeader;
+        } else if (cardName === 'detailsPanelCard' || objectName === 'detailsPanel') {
+            offset = FONT_SIZE_OFFSETS.detailsBody;
+        } else if (cardName === 'tooltipsCard' || objectName === 'tooltips') {
+            offset = FONT_SIZE_OFFSETS.tooltip;
+        }
+        const fontSize = Math.max(6, baseFontSize + offset);
+        return { fontFamily, fontSize };
     }
 
     private applySelectionStyles(selectedIds: any[]) {
@@ -1929,7 +1829,7 @@ export class Visual implements IVisual {
                 });
             }
 
-            const mostRecentSelectedId = this.findMostRecentItemId(selectedItems);
+            const mostRecentSelectedId = findMostRecentItemId(selectedItems);
             const isMultiSelect = selectedItems.length > 1;
 
             this.items.forEach((item: any) => {
@@ -2043,14 +1943,6 @@ export class Visual implements IVisual {
         }
     }
 
-    private resetDetailsPanelScroll() {
-        if (this.detailsPanelBody) {
-            this.detailsPanelBody.scrollTop = 0;
-        }
-        if (this.detailsPanel) {
-            this.detailsPanel.scrollTop = 0;
-        }
-    }
 
     private getShowFieldNames(): boolean {
         if (this.formattingSettings && (this.formattingSettings as any).detailsPanelCard) {
@@ -2079,28 +1971,6 @@ export class Visual implements IVisual {
         return false;
     }
 
-    private renderDetailsEmptyState(emptyMessage: string): HTMLElement {
-        return this.detailsPanelManager.renderDetailsEmptyState(emptyMessage, this.searchTerm);
-    }
-
-    private renderDetailsItemCard(item: any, selectedIdSet: Set<any>, isMultiSelect: boolean, count: number, hc: any): HTMLElement {
-        return this.detailsPanelManager.renderDetailsItemCard(item, selectedIdSet, isMultiSelect, count, hc, {
-            items: this.items ? this.items.get() : [],
-            isItemMatchingSelection: (it) => this.isItemMatchingSelection(it),
-            searchMatchedItemIds: this.searchMatchedItemIds,
-            searchTerm: this.searchTerm,
-            mostRecentSelectedId: this.mostRecentSelectedId,
-            expandedItemIds: this.expandedItemIds,
-            formattingSettings: this.formattingSettings,
-            getHighContrastSettings: () => this.getHighContrastSettings(),
-            getLocalizedString: (k, fb) => this.getLocalizedString(k, fb),
-            getShowFieldNames: () => this.getShowFieldNames(),
-            setMarkerHoverGlow: (id, enable) => this.setMarkerHoverGlow(id, enable),
-            clearAllMarkerHoverGlow: () => this.clearAllMarkerHoverGlow(),
-            openExternalUrl: (url) => this.openExternalUrl(url),
-            allowInteractions: this.allowInteractions !== false && !(this.host && (this.host as any).allowInteractions === false)
-        });
-    }
 
     private renderDetailsPanel(resetScroll: boolean = false): void {
         this.detailsPanelManager.renderDetailsPanel({
@@ -2116,7 +1986,7 @@ export class Visual implements IVisual {
             getShowFieldNames: () => this.getShowFieldNames(),
             setMarkerHoverGlow: (id, enable) => this.setMarkerHoverGlow(id, enable),
             clearAllMarkerHoverGlow: () => this.clearAllMarkerHoverGlow(),
-            openExternalUrl: (url) => this.openExternalUrl(url),
+            openExternalUrl: (url) => openExternalUrl(url, this.host),
             allowInteractions: this.allowInteractions !== false && !(this.host && (this.host as any).allowInteractions === false)
         }, resetScroll);
     }
@@ -2246,24 +2116,6 @@ export class Visual implements IVisual {
         this.landingPageManager.hideLandingPage(() => this.renderDetailsPanel());
     }
 
-    private renderTopBarGroupSelector(currentGroup: string, distinctGroups: string[], fieldName: string, isDateField: boolean = false): HTMLElement | null {
-        return this.topBarManager.renderTopBarGroupSelector(
-            currentGroup,
-            distinctGroups,
-            fieldName,
-            this.visualInstanceId,
-            this.allowInteractions !== false && !(this.host && (this.host as any).allowInteractions === false),
-            (cardName, objName) => this.getFontSettings(cardName, objName),
-            (newGroup) => {
-                this.clearSelection(true);
-                this.selectedTopLevelGroup = newGroup;
-                if (this.lastUpdateOptions) {
-                    this.update(this.lastUpdateOptions);
-                }
-            },
-            isDateField
-        );
-    }
 
     private toggleGroupCollapse(groupId: any, labelEl?: HTMLElement | null): void {
         if (!this.groups || !this.items) return;
@@ -2463,21 +2315,6 @@ export class Visual implements IVisual {
         this.setAllGroupsCollapseState(true);
     }
 
-    private renderTopBarSearchSection(): HTMLElement {
-        return this.topBarManager.renderTopBarSearchSection(
-            this.searchTerm,
-            (term) => {
-                this.searchTerm = term;
-                this.performTextSearch(term);
-            },
-            (term) => {
-                this.performTextSearch(term);
-            },
-            () => {
-                this.clearTextSearch();
-            }
-        );
-    }
 
     private updateTopBar(
         currentGroup: string,
@@ -2488,7 +2325,9 @@ export class Visual implements IVisual {
         hasSubgroups: boolean = false
     ): void {
         this.hasSubgroups = hasSubgroups;
-        const showSearch = (this.formattingSettings as any)?.topBarCard?.showSearch?.value
+        const showSearch = (this.formattingSettings as any)?.elementsCard?.showSearch?.value
+            ?? (this.formattingSettings as any)?.topBarCard?.showSearch?.value
+            ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.elements?.showSearch
             ?? (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.topBar?.showSearch
             ?? true;
 
@@ -2561,7 +2400,7 @@ export class Visual implements IVisual {
                     if (v == null) return false;
                     const str = String(v).toLowerCase();
                     if (str.includes(normalizedTerm)) return true;
-                    const plain = this.sanitizeHtmlToText(str).toLowerCase();
+                    const plain = sanitizeHtmlToText(str).toLowerCase();
                     return plain.includes(normalizedTerm);
                 });
             }
@@ -2586,7 +2425,7 @@ export class Visual implements IVisual {
                         matches = true;
                         break;
                     }
-                    const plain = this.sanitizeHtmlToText(str).toLowerCase();
+                    const plain = sanitizeHtmlToText(str).toLowerCase();
                     if (plain.includes(normalizedTerm)) {
                         matches = true;
                         break;
@@ -2639,10 +2478,13 @@ export class Visual implements IVisual {
             const selectedCount = this.currentSelectedItemIds.size || (Array.isArray(this.currentSelectedIds) ? this.currentSelectedIds.length : 0);
             const isMultiSelect = selectedCount > 1;
             const mostRecentSelectedId = hasSelection
-                ? (this.mostRecentSelectedId ?? this.findMostRecentItemId(this.items.get({ filter: (it: any) => it.type !== 'background' && this.isItemMatchingSelection(it) })))
+                ? (this.mostRecentSelectedId ?? findMostRecentItemId(this.items.get({ filter: (it: any) => it.type !== 'background' && this.isItemMatchingSelection(it) })))
                 : null;
 
-            const keepRangeMarkers = (this.formattingSettings as any)?.markersCard?.keepRangeMarkers?.value === true;
+            const keepRangeMarkers = (this.formattingSettings as any)?.generalCard?.keepRangeMarkers?.value === true
+                || (this.formattingSettings as any)?.markersCard?.keepRangeMarkers?.value === true
+                || (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.general?.keepRangeMarkers === true
+                || (this.lastUpdateOptions?.dataViews?.[0]?.metadata?.objects as any)?.markers?.keepRangeMarkers === true;
 
             this.items.forEach((item: any) => {
                 if (item.type === 'background') return;
@@ -2719,14 +2561,6 @@ export class Visual implements IVisual {
         }
     }
 
-    // Robust date parsing supporting cross-realm Date objects, timestamps, ISO strings, localized formats, and year numbers
-    private parseDate(val: any): Date | undefined {
-        return parseDate(val);
-    }
-
-    private combineDateAndTime(dateVal: any, timeVal: any): Date | undefined {
-        return combineDateAndTime(dateVal, timeVal);
-    }
 
     public update(options: VisualUpdateOptions) {
         if (this.events) {
@@ -2799,14 +2633,21 @@ export class Visual implements IVisual {
             }
 
             // Future Events setting
-            const showFutureEvents = (this.formattingSettings as any)?.timelineCard?.showFutureEvents?.value !== false;
+            const showFutureEvents = (this.formattingSettings as any)?.elementsCard?.showFutureEvents?.value
+                ?? (this.formattingSettings as any)?.timelineCard?.showFutureEvents?.value
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.elements?.showFutureEvents
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.timeline?.showFutureEvents
+                !== false;
             if (this.mainTimelineContainer) {
                 this.mainTimelineContainer.classList.toggle('hide-future-events', !showFutureEvents);
             }
 
             // Minimum zoom level limit
-            const minZoomSetting = (this.formattingSettings as any)?.timelineCard?.minZoom?.value?.value
+            const minZoomSetting = (this.formattingSettings as any)?.generalCard?.minZoom?.value?.value
+                ?? (this.formattingSettings as any)?.generalCard?.minZoom?.value
+                ?? (this.formattingSettings as any)?.timelineCard?.minZoom?.value?.value
                 ?? (this.formattingSettings as any)?.timelineCard?.minZoom?.value
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.general?.minZoom
                 ?? (options.dataViews[0]?.metadata?.objects as any)?.timeline?.minZoom
                 ?? 'day';
 
@@ -2851,25 +2692,27 @@ export class Visual implements IVisual {
                 this.mainTimeline.setOptions({ zoomMin: effectiveZoomMinMs });
             }
 
+            // Global Font Settings
+            const { fontFamily: globalFontFamily, baseFontSize } = this.getGlobalFontSettings();
+            setElementCssVar(this.target as HTMLElement, '--globalFontFamily', globalFontFamily);
+            setElementCssVar(this.target as HTMLElement, '--globalBaseFontSize', `${baseFontSize}pt`);
+
             // X-Axis Font
             const { fontFamily: xAxisFontFamily, fontSize: xAxisFontSize } = this.getFontSettings('timelineCard', 'timeline');
-            this.setElementCssVar(this.mainTimelineContainer, '--xAxisFontFamily', xAxisFontFamily);
-            this.setElementCssVar(this.mainTimelineContainer, '--xAxisFontSize', xAxisFontSize > 0 ? `${xAxisFontSize}pt` : null);
+            setElementCssVar(this.mainTimelineContainer, '--globalFontFamily', globalFontFamily);
+            setElementCssVar(this.mainTimelineContainer, '--xAxisFontFamily', xAxisFontFamily);
+            setElementCssVar(this.mainTimelineContainer, '--xAxisFontSize', xAxisFontSize > 0 ? `${xAxisFontSize}pt` : null);
+            setElementCssVar(this.mainTimelineContainer, '--itemFontSize', xAxisFontSize > 0 ? `${xAxisFontSize}pt` : null);
             this.mainTimelineContainer?.style.removeProperty('--xAxisFontColor');
 
-            // Marker Height & Swimlane Height (dictated by padding)
+            // Marker Height & Swimlane Height (dictated by padding offset from base font size)
             const markerHeightVal = Number(
-                (this.formattingSettings as any)?.markersCard?.markerHeight?.value
+                (this.formattingSettings as any)?.generalCard?.markerHeight?.value
                 ?? (options.dataViews[0]?.metadata?.objects as any)?.markers?.markerHeight
             ) || 20;
             const clampedMarkerHeight = Math.max(10, Math.min(80, markerHeightVal));
 
-            const markerPaddingVal = (this.formattingSettings as any)?.markersCard?.padding?.value
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.markers?.padding;
-            const paddingNum = markerPaddingVal !== undefined && markerPaddingVal !== null && !isNaN(Number(markerPaddingVal))
-                ? Number(markerPaddingVal)
-                : 6;
-            const clampedPadding = Math.max(0, Math.min(50, paddingNum));
+            const clampedPadding = Math.max(0, Math.min(50, PADDING_VALUES.marker));
             const rowHeightVal = Math.max(clampedMarkerHeight + (clampedPadding * 2), 16);
 
             if (this.mainTimelineContainer) {
@@ -2880,26 +2723,25 @@ export class Visual implements IVisual {
 
             // Group Header Font
             const { fontFamily: groupFontFamily, fontSize: groupFontSize } = this.getFontSettings('groupOrderCard', 'groupOrderCard');
-            this.setElementCssVar(this.mainTimelineContainer, '--groupHeaderFontFamily', groupFontFamily);
-            this.setElementCssVar(this.mainTimelineContainer, '--groupHeaderFontSize', groupFontSize > 0 ? `${groupFontSize}pt` : null);
+            setElementCssVar(this.mainTimelineContainer, '--groupHeaderFontFamily', groupFontFamily);
+            setElementCssVar(this.mainTimelineContainer, '--groupHeaderFontSize', groupFontSize > 0 ? `${groupFontSize}pt` : null);
             this.mainTimelineContainer?.style.removeProperty('--groupHeaderFontColor');
 
             // Mini Timeline Font
             const { fontFamily: miniFontFamily, fontSize: miniFontSize } = this.getFontSettings('miniTimelineCard', 'miniTimeline');
-            this.setElementCssVar(this.miniTimelineContainer, '--miniFontFamily', miniFontFamily);
-            this.setElementCssVar(this.miniTimelineContainer, '--miniFontSize', miniFontSize > 0 ? `${miniFontSize}pt` : null);
+            setElementCssVar(this.miniTimelineContainer, '--globalFontFamily', globalFontFamily);
+            setElementCssVar(this.miniTimelineContainer, '--miniFontFamily', miniFontFamily);
+            setElementCssVar(this.miniTimelineContainer, '--miniFontSize', miniFontSize > 0 ? `${miniFontSize}pt` : null);
             this.miniTimelineContainer?.style.removeProperty('--miniFontColor');
 
-            // Top Bar / Toolbar Font & Padding
+            // Top Bar / Toolbar Font & Padding (offset from base font size)
             const { fontFamily: topBarFontFamily, fontSize: topBarFontSize } = this.getFontSettings('topBarCard', 'topBar');
-            this.setElementCssVar(this.topBar, '--topBarFontFamily', topBarFontFamily);
-            this.setElementCssVar(this.topBar, '--topBarFontSize', topBarFontSize > 0 ? `${topBarFontSize}pt` : null);
+            setElementCssVar(this.topBar, '--globalFontFamily', globalFontFamily);
+            setElementCssVar(this.topBar, '--topBarFontFamily', topBarFontFamily);
+            setElementCssVar(this.topBar, '--topBarFontSize', topBarFontSize > 0 ? `${topBarFontSize}pt` : null);
             this.topBar?.style.removeProperty('--topBarFontColor');
 
-            const topBarPad = Number((this.formattingSettings as any)?.topBarCard?.padding?.value
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBar?.padding
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBar?.paddingTop
-                ?? 0);
+            const topBarPad = Math.max(0, Math.min(50, baseFontSize + PADDING_OFFSETS.topBar));
 
             if (this.topBar) {
                 this.topBar.style.setProperty('--topBarPadding', `${topBarPad}px`);
@@ -2908,8 +2750,9 @@ export class Visual implements IVisual {
 
             // Event Details Header Font
             const { fontFamily: detailsHeaderFontFamily, fontSize: detailsHeaderFontSize } = this.getFontSettings('detailsPanelCard', 'detailsPanel', 'headerFont');
-            this.setElementCssVar(this.detailsPanel, '--detailsHeaderFontFamily', detailsHeaderFontFamily);
-            this.setElementCssVar(this.detailsPanel, '--detailsHeaderFontSize', detailsHeaderFontSize > 0 ? `${detailsHeaderFontSize}pt` : null);
+            setElementCssVar(this.detailsPanel, '--globalFontFamily', globalFontFamily);
+            setElementCssVar(this.detailsPanel, '--detailsHeaderFontFamily', detailsHeaderFontFamily);
+            setElementCssVar(this.detailsPanel, '--detailsHeaderFontSize', detailsHeaderFontSize > 0 ? `${detailsHeaderFontSize}pt` : null);
             this.detailsPanel?.style.removeProperty('--detailsHeaderFontColor');
 
             if (this.detailsPanelHeader) {
@@ -2918,16 +2761,13 @@ export class Visual implements IVisual {
                 this.detailsPanelHeader.style.color = '';
             }
 
-            // Event Details Font & Padding
+            // Event Details Font & Padding (offset from base font size)
             const { fontFamily: detailsFontFamily, fontSize: detailsFontSize } = this.getFontSettings('detailsPanelCard', 'detailsPanel');
-            this.setElementCssVar(this.detailsPanel, '--detailsFontFamily', detailsFontFamily);
-            this.setElementCssVar(this.detailsPanel, '--detailsFontSize', detailsFontSize > 0 ? `${detailsFontSize}pt` : null);
+            setElementCssVar(this.detailsPanel, '--detailsFontFamily', detailsFontFamily);
+            setElementCssVar(this.detailsPanel, '--detailsFontSize', detailsFontSize > 0 ? `${detailsFontSize}pt` : null);
             this.detailsPanel?.style.removeProperty('--detailsFontColor');
 
-            const detailsPad = Number((this.formattingSettings as any)?.detailsPanelCard?.padding?.value
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.detailsPanel?.padding
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.detailsPanel?.paddingTop
-                ?? 10);
+            const detailsPad = Math.max(0, Math.min(50, baseFontSize + PADDING_OFFSETS.details));
 
             if (this.detailsPanelBody) {
                 this.detailsPanelBody.style.setProperty('--detailsPadding', `${detailsPad}px`);
@@ -2939,13 +2779,14 @@ export class Visual implements IVisual {
             this.currentTooltipFontFamily = tooltipFontFamily;
             this.currentTooltipFontSize = tooltipFontSize;
 
-            this.setElementCssVar(this.target as HTMLElement, '--tooltipFontFamily', tooltipFontFamily);
-            this.setElementCssVar(this.target as HTMLElement, '--tooltipFontSize', tooltipFontSize > 0 ? `${tooltipFontSize}pt` : null);
+            setElementCssVar(this.target as HTMLElement, '--tooltipFontFamily', tooltipFontFamily);
+            setElementCssVar(this.target as HTMLElement, '--tooltipFontSize', tooltipFontSize > 0 ? `${tooltipFontSize}pt` : null);
 
             if (this.enhancedTooltipElement) {
-                this.setElementCssVar(this.enhancedTooltipElement, '--tooltipFontFamily', tooltipFontFamily);
+                setElementCssVar(this.enhancedTooltipElement, '--globalFontFamily', globalFontFamily);
+                setElementCssVar(this.enhancedTooltipElement, '--tooltipFontFamily', tooltipFontFamily);
                 this.enhancedTooltipElement.style.fontFamily = tooltipFontFamily || '';
-                this.setElementCssVar(this.enhancedTooltipElement, '--tooltipFontSize', tooltipFontSize > 0 ? `${tooltipFontSize}pt` : null);
+                setElementCssVar(this.enhancedTooltipElement, '--tooltipFontSize', tooltipFontSize > 0 ? `${tooltipFontSize}pt` : null);
             }
 
             if (!options.dataViews[0].table) {
@@ -2988,7 +2829,7 @@ export class Visual implements IVisual {
             ));
 
             const metaCols = options.dataViews?.[0]?.metadata?.columns || [];
-            const currentDataSignature = this.computeDataSignature(rows, columns, this.selectedTopLevelGroup, metaCols);
+            const currentDataSignature = computeDataSignature(rows, columns, this.selectedTopLevelGroup, metaCols);
             const dataChanged = this.lastDataSignature !== '' && this.lastDataSignature !== currentDataSignature;
             const isInitialLoad = !this.hasLoadedOnce;
 
@@ -3059,25 +2900,47 @@ export class Visual implements IVisual {
         }
     }
 
-    private resolveColumnRoles(columns: powerbi.DataViewMetadataColumn[], options: VisualUpdateOptions): { colMap: { [key: string]: number }; contentIndices: number[] } {
-        return resolveColumnRoles(columns, options);
+
+    private currentTimeTrackingTimer: any = null;
+
+    private startTimeTracking(): void {
+        this.stopTimeTracking();
+        this.currentTimeTrackingTimer = setInterval(() => {
+            this.updateCurrentTimeTracking();
+        }, 5000);
     }
 
-    private hasExternalHighlights(table: any, columns: powerbi.DataViewMetadataColumn[], categoricalValues: any[]): boolean {
-        return hasExternalHighlights(table, columns, categoricalValues);
+    private stopTimeTracking(): void {
+        if (this.currentTimeTrackingTimer) {
+            clearInterval(this.currentTimeTrackingTimer);
+            this.currentTimeTrackingTimer = null;
+        }
     }
 
-    private isRowExternallyHighlighted(rowIndex: number, tableHighlights: any, columns: powerbi.DataViewMetadataColumn[], categoricalValues: any[]): boolean {
-        return isRowExternallyHighlighted(rowIndex, tableHighlights, columns, categoricalValues);
-    }
-
-    private sortGroups(
-        groups: any[],
-        hasGroupOrderField: boolean = false,
-        activeSort?: ActiveSortInfo | null,
-        groupDateStats?: Map<string, GroupDateStats>
-    ): void {
-        sortGroups(groups, hasGroupOrderField, activeSort, groupDateStats);
+    private updateCurrentTimeTracking(): void {
+        if (!this.items || !this.mainTimeline) return;
+        const now = (this.mainTimeline as any)?.currentTime?.getCurrentTime?.() || new Date();
+        const updates: any[] = [];
+        this.items.forEach((item: any) => {
+            if (item.isOngoing) {
+                updates.push({
+                    id: item.id,
+                    end: now
+                });
+            }
+        });
+        const futureItem = this.items.get('future-bg');
+        if (futureItem) {
+            updates.push({
+                id: 'future-bg',
+                start: now
+            });
+        }
+        if (updates.length > 0) {
+            this.isInternalDataUpdate = true;
+            this.items.update(updates);
+            this.isInternalDataUpdate = false;
+        }
     }
 
     private updateDataSetCollections(newGroups: any[], newItems: any[], newMiniGroups: any[], miniitems: any[], hasGroupOrderField?: boolean): void {
@@ -3087,6 +2950,14 @@ export class Visual implements IVisual {
 
         this.items.clear();
         this.items.add(newItems);
+
+        const hasOngoingItems = newItems.some((it: any) => it.isOngoing);
+        const hasFutureBg = newItems.some((it: any) => it.id === 'future-bg');
+        if (hasOngoingItems || hasFutureBg) {
+            this.startTimeTracking();
+        } else {
+            this.stopTimeTracking();
+        }
 
         const existingMiniGroupIds = this.miniGroups ? this.miniGroups.getIds() : [];
         const newMiniGroupIds = newMiniGroups.map(g => g.id);
@@ -3112,9 +2983,15 @@ export class Visual implements IVisual {
         try {
             const table = options.dataViews[0].table;
             // Map column roles to indices
-            const { colMap, contentIndices } = this.resolveColumnRoles(columns, options);
+            const { colMap, contentIndices } = resolveColumnRoles(columns, options);
 
             // Top Level Group handling
+            const topLevelCard = (this.formattingSettings as any)?.topLevelGroupCard;
+            const showTopLevelGroup = topLevelCard?.show?.value ?? true;
+            const maxDistinctTopLevelItems = Number(topLevelCard?.maxDistinctItems?.value) || 100;
+            const topLevelOverflowMessage = topLevelCard?.overflowMessage?.value
+                || "Too many results have been returned and you should select a filter value to continue.";
+
             const topLevelCol = colMap['topLevelGroup'] !== undefined ? columns[colMap['topLevelGroup']] : null;
             const topLevelFieldName = topLevelCol ? (topLevelCol.displayName || topLevelCol.queryName || 'Top Level Group') : 'Top Level Group';
 
@@ -3139,6 +3016,46 @@ export class Visual implements IVisual {
                 return String(val).trim();
             };
 
+            const groupCol = colMap['group'] !== undefined ? columns[colMap['group']] : null;
+            const isGroupDate = groupCol !== null && (
+                isDateColumn(groupCol) ||
+                rows.some((row: any) => {
+                    const val = row[colMap['group']];
+                    return val instanceof Date || (typeof val === 'string' && val.trim().length > 0 && (
+                        /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()) ||
+                        /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(val.trim())
+                    ) && !isNaN(parseDate(val)?.getTime() ?? NaN));
+                })
+            );
+
+            const subgroupCol = colMap['subgroup'] !== undefined ? columns[colMap['subgroup']] : null;
+            const isSubgroupDate = subgroupCol !== null && (
+                isDateColumn(subgroupCol) ||
+                rows.some((row: any) => {
+                    const val = row[colMap['subgroup']];
+                    return val instanceof Date || (typeof val === 'string' && val.trim().length > 0 && (
+                        /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(val.trim()) ||
+                        /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/.test(val.trim())
+                    ) && !isNaN(parseDate(val)?.getTime() ?? NaN));
+                })
+            );
+
+            const formatGroupVal = (val: any): string => {
+                if (val === null || val === undefined || String(val).trim().length === 0) return 'General';
+                if (isGroupDate || val instanceof Date) {
+                    return formatDateAsDDMMMYYYY(val);
+                }
+                return String(val).trim();
+            };
+
+            const formatSubgroupVal = (val: any): string => {
+                if (val === null || val === undefined || String(val).trim().length === 0) return '';
+                if (isSubgroupDate || val instanceof Date) {
+                    return formatDateAsDDMMMYYYY(val);
+                }
+                return String(val).trim();
+            };
+
             let distinctTopLevelGroups: string[] = [];
             if (colMap['topLevelGroup'] !== undefined) {
                 const topLevelSet = new Set<string>();
@@ -3151,8 +3068,8 @@ export class Visual implements IVisual {
                     distinctTopLevelGroups = Array.from(topLevelSet).sort((a, b) => {
                         if (a === '(Blank)') return 1;
                         if (b === '(Blank)') return -1;
-                        const timeA = moment(a, 'DD MMM YYYY').valueOf();
-                        const timeB = moment(b, 'DD MMM YYYY').valueOf();
+                        const timeA = parseDate(a)?.getTime() ?? moment(a, 'DD MMM YYYY HH:mm').valueOf();
+                        const timeB = parseDate(b)?.getTime() ?? moment(b, 'DD MMM YYYY HH:mm').valueOf();
                         if (!isNaN(timeA) && !isNaN(timeB)) {
                             return timeA - timeB;
                         }
@@ -3163,8 +3080,8 @@ export class Visual implements IVisual {
                 }
             }
 
-            // Check if top level group returns more than 100 distinct values
-            if (colMap['topLevelGroup'] !== undefined && distinctTopLevelGroups.length > 100) {
+            // Check if top level group returns more distinct values than allowed
+            if (showTopLevelGroup && colMap['topLevelGroup'] !== undefined && distinctTopLevelGroups.length > maxDistinctTopLevelItems) {
                 if (this.topBar) this.topBar.style.display = "none";
                 this.selectedTopLevelGroup = null;
                 this.currentSelectedItemIds.clear();
@@ -3174,21 +3091,16 @@ export class Visual implements IVisual {
                 this.hideLoading();
                 this.showStatus(
                     "Too Many Results",
-                    this.getLocalizedString(
-                        "status_tooManyResults",
-                        "Too many results have been returned and you should select a filter value to continue."
-                    ),
-                    `The "${topLevelFieldName}" field returned ${distinctTopLevelGroups.length} distinct values (limit is 100). Please select a filter value to continue.`
+                    topLevelOverflowMessage,
+                    `The "${topLevelFieldName}" field returned ${distinctTopLevelGroups.length} distinct values (limit is ${maxDistinctTopLevelItems}). Please select a filter value to continue.`
                 );
                 if (this.events) { this.events.renderingFinished(options); }
                 return;
-            } else if (colMap['topLevelGroup'] === undefined && colMap['group'] !== undefined) {
+            } else if ((!showTopLevelGroup || colMap['topLevelGroup'] === undefined) && colMap['group'] !== undefined) {
                 const groupSet = new Set<string>();
                 rows.forEach((row: any) => {
                     const val = row[colMap['group']];
-                    const str = (val === null || val === undefined || String(val).trim().length === 0)
-                        ? 'General'
-                        : String(val).trim();
+                    const str = formatGroupVal(val);
                     groupSet.add(str);
                 });
                 if (groupSet.size > 100) {
@@ -3220,7 +3132,7 @@ export class Visual implements IVisual {
 
             let hasSubgroups = false;
 
-            if (colMap['topLevelGroup'] !== undefined && distinctTopLevelGroups.length > 0) {
+            if (showTopLevelGroup && colMap['topLevelGroup'] !== undefined && distinctTopLevelGroups.length > 0) {
                 if (!this.selectedTopLevelGroup || !distinctTopLevelGroups.includes(this.selectedTopLevelGroup)) {
                     this.selectedTopLevelGroup = distinctTopLevelGroups[0];
                 }
@@ -3249,15 +3161,9 @@ export class Visual implements IVisual {
 
             // Handle Top Bar and Mini Timeline container heights
             const showTopBar = this.topBar && this.topBar.style.display !== "none";
-            const topBarFontSize = (this.formattingSettings as any)?.topBarCard?.font?.fontSize?.value
-                ?? (this.formattingSettings as any)?.topBarCard?.fontSize?.value
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBar?.fontSize
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBarContent?.fontSize;
-            const topBarFontSizeNum = topBarFontSize && Number(topBarFontSize) > 0 ? Number(topBarFontSize) : 11;
-            const topBarPad = Number((this.formattingSettings as any)?.topBarCard?.padding?.value
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBar?.padding
-                ?? (options.dataViews[0]?.metadata?.objects as any)?.topBar?.paddingTop
-                ?? 0);
+            const topBarFontSizeNum = this.getFontSettings('topBarCard', 'topBar').fontSize || 11;
+            const { baseFontSize } = this.getGlobalFontSettings();
+            const topBarPad = Math.max(0, Math.min(50, baseFontSize + PADDING_OFFSETS.topBar));
             const topBarDynamicHeight = topBarFontSizeNum > 11 ? Math.max(28, Math.round(topBarFontSizeNum * 2.3)) : 28;
             const topBarTotalHeight = topBarDynamicHeight + (topBarPad * 2);
             const topBarHeight = showTopBar ? topBarTotalHeight : 0;
@@ -3344,18 +3250,18 @@ export class Visual implements IVisual {
 
             const tableHighlights = (table as any).highlights;
             const categoricalValues = options.dataViews?.[0]?.categorical?.values;
-            const hasExternalHighlights = this.hasExternalHighlights(table, columns, categoricalValues);
+            const hasExtHighlights = hasExternalHighlights(table, columns, categoricalValues);
 
             if (isFilterChangeOrReload) {
-                if (!hasExternalHighlights && !hasSelectionFromManager) {
+                if (!hasExtHighlights && !hasSelectionFromManager) {
                     this.clearSelection();
                     selectedIds = [];
                 }
-            } else if (!hasExternalHighlights && selectedIds.length === 0 && this.currentSelectedItemIds.size === 0) {
+            } else if (!hasExtHighlights && selectedIds.length === 0 && this.currentSelectedItemIds.size === 0) {
                 this.clearSelection();
             }
 
-            const hasCrossHighlight = selectedIds.length > 0 || this.currentSelectedKeys.size > 0 || this.currentSelectedItemIds.size > 0 || hasExternalHighlights;
+            const hasCrossHighlight = selectedIds.length > 0 || this.currentSelectedKeys.size > 0 || this.currentSelectedItemIds.size > 0 || hasExtHighlights;
 
             const rawTheme = (this.formattingSettings as any)?.markersCard?.colorTheme?.value;
             const activeTheme = getColorTheme(rawTheme);
@@ -3378,7 +3284,11 @@ export class Visual implements IVisual {
             const groupDateStatsMap = new Map<string, GroupDateStats>();
 
             // Add Future Background
-            const showFutureEvents = (this.formattingSettings as any)?.timelineCard?.showFutureEvents?.value !== false;
+            const showFutureEvents = (this.formattingSettings as any)?.elementsCard?.showFutureEvents?.value
+                ?? (this.formattingSettings as any)?.timelineCard?.showFutureEvents?.value
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.elements?.showFutureEvents
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.timeline?.showFutureEvents
+                !== false;
             const now = new Date();
             if (showFutureEvents) {
                 newItems.push({
@@ -3398,8 +3308,8 @@ export class Visual implements IVisual {
                 const row = itemObj.row;
                 const originalIndex = itemObj.originalIndex;
 
-                const groupName = (colMap['group'] !== undefined && row[colMap['group']] != null ? String(row[colMap['group']]) : 'General') || 'General';
-                const rawSubgroup = colMap['subgroup'] !== undefined && row[colMap['subgroup']] != null ? String(row[colMap['subgroup']]).trim() : '';
+                const groupName = (colMap['group'] !== undefined && row[colMap['group']] != null ? formatGroupVal(row[colMap['group']]) : 'General') || 'General';
+                const rawSubgroup = colMap['subgroup'] !== undefined && row[colMap['subgroup']] != null ? formatSubgroupVal(row[colMap['subgroup']]) : '';
                 const subgroupName = rawSubgroup.length > 0 ? rawSubgroup : '';
                 const eventType = (colMap['eventType'] !== undefined && row[colMap['eventType']] != null ? String(row[colMap['eventType']]) : '') || '';
 
@@ -3408,13 +3318,13 @@ export class Visual implements IVisual {
                 const rawEndDate = colMap['endDate'] !== undefined ? row[colMap['endDate']] : undefined;
                 const rawEndTime = colMap['endTime'] !== undefined ? row[colMap['endTime']] : undefined;
 
-                const startDate = this.combineDateAndTime(rawStartDate, rawStartTime);
+                const startDate = combineDateAndTime(rawStartDate, rawStartTime);
 
                 const hasEndDate = rawEndDate !== undefined && rawEndDate !== null && rawEndDate !== '';
                 const hasEndTime = rawEndTime !== undefined && rawEndTime !== null && rawEndTime !== '';
 
                 const effectiveEndDate = hasEndDate ? rawEndDate : (hasEndTime ? rawStartDate : undefined);
-                let endDate = this.combineDateAndTime(effectiveEndDate, rawEndTime);
+                let endDate = combineDateAndTime(effectiveEndDate, rawEndTime);
 
                 if (!startDate) {
                     dateParseErrors++;
@@ -3422,13 +3332,21 @@ export class Visual implements IVisual {
                     return;
                 }
 
-                // If end time is provided without an explicit end date, and ends before start time, treat as overnight event
-                if (endDate && endDate < startDate && !hasEndDate && hasEndTime) {
-                    endDate = new Date(endDate.getTime() + 86400000);
-                }
+                const isOngoing = (rawEndDate != null && String(rawEndDate).trim().startsWith('9999-01-01'))
+                    || (effectiveEndDate != null && String(effectiveEndDate).trim().startsWith('9999-01-01'))
+                    || (endDate != null && !isNaN(endDate.getTime()) && endDate.getFullYear() >= 9999);
 
-                if (endDate && endDate < startDate) {
-                    endDate = undefined;
+                if (isOngoing) {
+                    endDate = new Date(Math.max(now.getTime(), startDate.getTime()));
+                } else {
+                    // If end time is provided without an explicit end date, and ends before start time, treat as overnight event
+                    if (endDate && endDate < startDate && !hasEndDate && hasEndTime) {
+                        endDate = new Date(endDate.getTime() + 86400000);
+                    }
+
+                    if (endDate && endDate < startDate) {
+                        endDate = undefined;
+                    }
                 }
 
                 const startMs = startDate.getTime();
@@ -3487,7 +3405,7 @@ export class Visual implements IVisual {
                         const val = row[cIdx];
                         if (val !== null && val !== undefined) {
                             const col = columns[cIdx];
-                            const strVal = this.formatContentFieldValue(val, col);
+                            const strVal = formatContentFieldValue(val, col);
                             if (strVal.length > 0) {
                                 const fieldName = (col ? (col.displayName || col.queryName || '') : '').trim();
 
@@ -3507,7 +3425,7 @@ export class Visual implements IVisual {
                 } else if (colMap['content'] !== undefined && row[colMap['content']] != null) {
                     const col = columns[colMap['content']];
                     const val = row[colMap['content']];
-                    const strVal = this.formatContentFieldValue(val, col);
+                    const strVal = formatContentFieldValue(val, col);
                     if (strVal.length > 0) {
                         const fieldName = (col ? (col.displayName || col.queryName || '') : '').trim();
 
@@ -3547,7 +3465,7 @@ export class Visual implements IVisual {
                     const parsedOrder = rawGroupOrder !== undefined ? Number(rawGroupOrder) : NaN;
                     const groupOrder = !isNaN(parsedOrder) ? parsedOrder : groupMap.size;
 
-                    let groupColor = rawGroupColor ? this.normalizeColor(rawGroupColor, '') : '';
+                    let groupColor = rawGroupColor ? normalizeColor(rawGroupColor, '', this.colorPalette) : '';
                     if (!groupColor || groupColor === '#ccc') {
                         groupColor = themePalette[groupMap.size % themePalette.length];
                     }
@@ -3576,7 +3494,7 @@ export class Visual implements IVisual {
                         const parsedOrder = rawGroupOrder !== undefined ? Number(rawGroupOrder) : NaN;
                         const subOrder = !isNaN(parsedOrder) ? parsedOrder : groupMap.size;
 
-                        let subGroupColor = rawGroupColor ? this.normalizeColor(rawGroupColor, '') : '';
+                        let subGroupColor = rawGroupColor ? normalizeColor(rawGroupColor, '', this.colorPalette) : '';
                         if (!subGroupColor) {
                             subGroupColor = parentGroupObj.color;
                         }
@@ -3611,7 +3529,7 @@ export class Visual implements IVisual {
                 // 5. Theme defaultColor fallback
                 let color = '';
                 if (isEventColorTheme && rawColor) {
-                    color = this.normalizeColor(rawColor, '');
+                    color = normalizeColor(rawColor, '', this.colorPalette);
                 }
                 if (!color) {
                     const colorKey = isGroupAndEventType
@@ -3637,7 +3555,7 @@ export class Visual implements IVisual {
                     const formatColor = (this.formattingSettings as any)?.dataPointCard?.fill?.value?.value
                         || (this.formattingSettings as any)?.dataPointCard?.defaultColor?.value?.value;
                     if (formatColor) {
-                        color = this.normalizeColor(formatColor, '');
+                        color = normalizeColor(formatColor, '', this.colorPalette);
                     }
                 }
                 if (!color) {
@@ -3646,7 +3564,7 @@ export class Visual implements IVisual {
 
                 uniqueColors.add(color);
 
-                const isPoint = !endDate || (endDate.getTime() === startDate.getTime());
+                const isPoint = !isOngoing && (!endDate || (endDate.getTime() === startDate.getTime()));
 
                 // SelectionId
                 let selectionId: ISelectionId | undefined;
@@ -3658,14 +3576,14 @@ export class Visual implements IVisual {
                     // Ignore selectionId errors
                 }
 
-                const dateString = this.formatEventDate(startDate, isPoint ? undefined : endDate);
+                const dateString = formatEventDate(startDate, isPoint ? undefined : endDate, isOngoing);
 
                 const eventLabel = eventType || (content ? content.split('\n')[0] : '') || groupName || "Event";
                 const eventHeader = eventType || eventLabel;
 
                 const tooltipInfo: VisualTooltipDataItem[] = [
                     {
-                        header: this.sanitizeHtmlToText(eventHeader),
+                        header: sanitizeHtmlToText(eventHeader),
                         displayName: '',
                         value: dateString,
                         color: color,
@@ -3673,7 +3591,7 @@ export class Visual implements IVisual {
                     }
                 ];
 
-                const sanitizedTooltipContent = this.formatContentForTooltip(content);
+                const sanitizedTooltipContent = formatContentForTooltip(content);
                 if (sanitizedTooltipContent) {
                     tooltipInfo.push({
                         displayName: '',
@@ -3683,9 +3601,9 @@ export class Visual implements IVisual {
                     });
                 }
 
-                const flagInfo = this.extractFlagClass(additionalClass);
-                const sashInfo = this.extractSashClass(additionalClass);
-                const sashFlagVars = this.getItemSashFlagVars(additionalClass);
+                const flagInfo = extractFlagClass(additionalClass, this.colorPalette);
+                const sashInfo = extractSashClass(additionalClass, this.colorPalette);
+                const sashFlagVars = getItemSashFlagVars(additionalClass, this.colorPalette);
                 const extraClasses = [
                     flagInfo ? `has-flag ${flagInfo.className}` : '',
                     sashInfo ? `has-sash ${sashInfo.className}` : ''
@@ -3696,7 +3614,7 @@ export class Visual implements IVisual {
                 let itemStyle = isPoint
                     ? `${sashFlagVars}--item-color: ${color}; --item-border-color: #555555; background: transparent; border: none; box-shadow: none; opacity: 1.0;`
                     : `${sashFlagVars}--item-color: ${color}; --item-border-color: #555555; color: #ffffff; background-color: ${color}; border: 1px solid #555555; border-color: #555555; opacity: 1.0;`;
-                let itemClassName = baseClass;
+                let itemClassName = isOngoing ? `${baseClass} is-ongoing`.trim() : baseClass;
                 let isItemSelected = false;
 
                 if (hasCrossHighlight) {
@@ -3704,8 +3622,8 @@ export class Visual implements IVisual {
                     if (this.currentSelectedItemIds.has(originalIndex)) {
                         isSelected = true;
                     }
-                    if (!isSelected && hasExternalHighlights) {
-                        isSelected = this.isRowExternallyHighlighted(originalIndex, tableHighlights, columns, categoricalValues);
+                    if (!isSelected && hasExtHighlights) {
+                        isSelected = isRowExternallyHighlighted(originalIndex, tableHighlights, columns, categoricalValues);
                     }
 
                     if (!isSelected && selectionId) {
@@ -3758,10 +3676,11 @@ export class Visual implements IVisual {
                     originalType: isPoint ? 'point' : 'range',
                     style: itemStyle,
                     isPoint: isPoint,
+                    isOngoing: isOngoing,
                     isSelected: isItemSelected,
                     title: '',
                     className: itemClassName,
-                    originalClass: combinedClasses || '',
+                    originalClass: isOngoing ? `${combinedClasses} is-ongoing`.trim() : (combinedClasses || ''),
                     eventClass: sanitizedEventClass || null,
                     selectionId: selectionId,
                     tooltipInfo: tooltipInfo,
@@ -3775,7 +3694,7 @@ export class Visual implements IVisual {
             const highlightedItems = hasCrossHighlight
                 ? newItems.filter((it: any) => it.type !== 'background' && it.isSelected)
                 : [];
-            const mostRecentSelectedId = hasCrossHighlight ? this.findMostRecentItemId(highlightedItems) : null;
+            const mostRecentSelectedId = hasCrossHighlight ? findMostRecentItemId(highlightedItems) : null;
             const isMultiSelect = highlightedItems.length > 1;
             if (hasCrossHighlight) {
                 this.mostRecentSelectedId = mostRecentSelectedId;
@@ -3816,9 +3735,13 @@ export class Visual implements IVisual {
             const activeSort = getActiveSortInfo(columns, colMap) || getActiveSortInfo(metaCols, colMap);
 
             // Sort groups
-            this.sortGroups(newGroups, hasGroupOrderField, activeSort, groupDateStatsMap);
+            sortGroups(newGroups, hasGroupOrderField, activeSort, groupDateStatsMap);
 
-            const collapseSubgroupsOnLoad = (this.formattingSettings as any)?.groupOrderCard?.collapseSubgroupsOnLoad?.value ?? true;
+            const collapseSubgroupsOnLoad = (this.formattingSettings as any)?.miscellaneousCard?.collapseSubgroupsOnLoad?.value
+                ?? (this.formattingSettings as any)?.groupOrderCard?.collapseSubgroupsOnLoad?.value
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.miscellaneous?.collapseSubgroupsOnLoad
+                ?? (options.dataViews[0]?.metadata?.objects as any)?.groupOrderCard?.collapseSubgroupsOnLoad
+                ?? true;
             const collapseSettingChanged = this.previousCollapseSubgroupsOnLoad !== undefined && this.previousCollapseSubgroupsOnLoad !== collapseSubgroupsOnLoad;
             this.previousCollapseSubgroupsOnLoad = collapseSubgroupsOnLoad;
 
@@ -3869,7 +3792,7 @@ export class Visual implements IVisual {
             // Mini groups: normal, highlighted, and dimmed variants for each unique color
             const newMiniGroups: any[] = [];
             uniqueColors.forEach(c => {
-                const dimmedColors = this.getDeselectedMarkerColors(c);
+                const dimmedColors = getDeselectedMarkerColors(c, this.colorPalette);
                 newMiniGroups.push({
                     id: c,
                     style: `stroke: ${c}; fill: ${c}; stroke-width: 1px; fill-opacity: 0.8;`
@@ -4106,6 +4029,7 @@ export class Visual implements IVisual {
 
     public destroy(): void {
         this.currentUpdateId++;
+        this.stopTimeTracking();
         if (this.globalListeners) {
             window.removeEventListener('pointerup', this.globalListeners.handleGlobalUp, true);
             window.removeEventListener('mouseup', this.globalListeners.handleGlobalUp, true);

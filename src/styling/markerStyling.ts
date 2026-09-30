@@ -24,14 +24,19 @@ export function computeItemStyleAndClass(
     colorPalette?: ISandboxExtendedColorPalette | null
 ): MarkerStyleClassResult {
     const isPoint = isPointOverride !== undefined ? isPointOverride : (item.isPoint || item.type === 'point');
+    const isOngoing = item.isOngoing === true;
     const baseColor = item.color || '#3677a8';
     const cleanOrigClass = (item.originalClass || '')
         .replace(/\btimeline-bar\b/g, '')
         .replace(/\bselected-primary\b/g, '')
         .replace(/\bselected-dashed\b/g, '')
         .replace(/\bsearch-matched\b/g, '')
+        .replace(/\bis-ongoing\b/g, '')
         .trim();
-    const baseClass = isPoint ? cleanOrigClass : (cleanOrigClass ? `timeline-bar ${cleanOrigClass}` : 'timeline-bar').trim();
+    let baseClass = isPoint ? cleanOrigClass : (cleanOrigClass ? `timeline-bar ${cleanOrigClass}` : 'timeline-bar').trim();
+    if (isOngoing) {
+        baseClass = `${baseClass} is-ongoing`.trim();
+    }
     const sashFlagVars = getItemSashFlagVars(item.eventClass || item.originalClass, colorPalette);
 
     let className = baseClass;
@@ -45,6 +50,8 @@ export function computeItemStyleAndClass(
             className = baseClass ? `${baseClass} cross-highlight-selected ${borderClass}` : `cross-highlight-selected ${borderClass}`;
             if (isPoint) {
                 style = `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #0078d4; background: transparent; border: none; box-shadow: none; opacity: 1.0;`;
+            } else if (isOngoing) {
+                style = `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #0078d4; color: #ffffff; background-color: ${baseColor}; border: ${borderStyle}; border-right: none !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; opacity: 1.0;`;
             } else {
                 style = `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #0078d4; color: #ffffff; background-color: ${baseColor}; border-color: #0078d4; opacity: 1.0; box-shadow: 0 0 3px rgba(0, 120, 212, 0.85); border: ${borderStyle};`;
             }
@@ -53,12 +60,16 @@ export function computeItemStyleAndClass(
             const dimmed = getDeselectedMarkerColors(baseColor, colorPalette);
             style = isPoint
                 ? `${sashFlagVars}--item-color: ${dimmed.fill}; --item-border-color: ${dimmed.border}; background: transparent; border: none; box-shadow: none; opacity: 1.0;`
-                : `${sashFlagVars}--item-color: ${dimmed.fill}; --item-border-color: ${dimmed.border}; color: ${dimmed.text}; background-color: ${dimmed.fill}; border-color: ${dimmed.border}; opacity: 1.0; box-shadow: none;`;
+                : (isOngoing
+                    ? `${sashFlagVars}--item-color: ${dimmed.fill}; --item-border-color: ${dimmed.border}; color: ${dimmed.text}; background-color: ${dimmed.fill}; border-color: ${dimmed.border}; border-right: none !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; opacity: 1.0; box-shadow: none;`
+                    : `${sashFlagVars}--item-color: ${dimmed.fill}; --item-border-color: ${dimmed.border}; color: ${dimmed.text}; background-color: ${dimmed.fill}; border-color: ${dimmed.border}; opacity: 1.0; box-shadow: none;`);
         }
     } else {
         style = isPoint
             ? `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #555555; background: transparent; border: none; box-shadow: none; opacity: 1.0;`
-            : `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #555555; color: #ffffff; background-color: ${baseColor}; border: 1px solid #555555; border-color: #555555; opacity: 1.0;`;
+            : (isOngoing
+                ? `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #555555; color: #ffffff; background-color: ${baseColor}; border: 1px solid #555555; border-color: #555555; border-right: none !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; opacity: 1.0;`
+                : `${sashFlagVars}--item-color: ${baseColor}; --item-border-color: #555555; color: #ffffff; background-color: ${baseColor}; border: 1px solid #555555; border-color: #555555; opacity: 1.0;`);
     }
 
     if (searchMatchedItemIds.has(item.id)) {

@@ -438,7 +438,9 @@ export class TooltipManager {
     }
 
     public isTooltipsEnabled(formattingSettings: any, lastUpdateOptions: any): boolean {
-        return formattingSettings?.tooltipsCard?.show?.value
+        return formattingSettings?.elementsCard?.showTooltips?.value
+            ?? formattingSettings?.tooltipsCard?.show?.value
+            ?? lastUpdateOptions?.dataViews?.[0]?.metadata?.objects?.elements?.show
             ?? lastUpdateOptions?.dataViews?.[0]?.metadata?.objects?.tooltips?.show
             ?? true;
     }
@@ -493,7 +495,7 @@ export class TooltipManager {
         const moreCount = matchedItems.length - 1;
         const headerText = primaryEventType;
 
-        const dateStr = formatEventDate(firstItem.start, firstItem.end) || firstItem.dateString || '';
+        const dateStr = formatEventDate(firstItem.start, firstItem.end, firstItem.isOngoing) || firstItem.dateString || '';
         const showFieldNames = this.options.getShowFieldNames();
         const contentVal = getItemContent(firstItem, showFieldNames);
 
