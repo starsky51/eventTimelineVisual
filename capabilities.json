@@ -67,11 +67,103 @@
         }
     ],
     "objects": {
+        "elements": {
+            "displayName": "Elements",
+            "properties": {
+                "showFutureEvents": {
+                    "displayName": "Future Events Overlay",
+                    "description": "Turn the future events label and overlay on or off",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "show": {
+                    "displayName": "Show Tooltips",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "showSearch": {
+                    "displayName": "Show Text Search",
+                    "description": "Show or hide the text search box on the top bar",
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
+        "general": {
+            "displayName": "General",
+            "properties": {
+                "fontFamily": {
+                    "displayName": "Font Family",
+                    "type": {
+                        "formatting": {
+                            "fontFamily": true
+                        }
+                    }
+                },
+                "fontSize": {
+                    "displayName": "Base Font Size",
+                    "type": {
+                        "formatting": {
+                            "fontSize": true
+                        }
+                    }
+                },
+                "markerHeight": {
+                    "displayName": "Marker Height",
+                    "description": "Height of timeline markers in pixels",
+                    "type": {
+                        "integer": true
+                    }
+                },
+                "minZoom": {
+                    "displayName": "Maximum Zoom Level",
+                    "description": "Maximum zoom level limit for the main timeline",
+                    "type": {
+                        "enumeration": [
+                            {
+                                "value": "1hour",
+                                "displayName": "1 Hour"
+                            },
+                            {
+                                "value": "6hours",
+                                "displayName": "6 Hours"
+                            },
+                            {
+                                "value": "12hours",
+                                "displayName": "12 Hours"
+                            },
+                            {
+                                "value": "day",
+                                "displayName": "Day"
+                            },
+                            {
+                                "value": "week",
+                                "displayName": "Week"
+                            },
+                            {
+                                "value": "month",
+                                "displayName": "Month"
+                            }
+                        ]
+                    }
+                },
+                "keepRangeMarkers": {
+                    "displayName": "Keep Range Markers",
+                    "description": "Keep vis-range markers as vis-range even when the width is small enough to warrant a vis-point marker",
+                    "type": {
+                        "bool": true
+                    }
+                }
+            }
+        },
         "timeline": {
             "displayName": "Timeline",
             "properties": {
                 "showFutureEvents": {
-                    "displayName": "Future events",
+                    "displayName": "Future Events Overlay",
                     "description": "Turn the future events label and overlay on or off",
                     "type": {
                         "bool": true
@@ -108,27 +200,11 @@
                             }
                         ]
                     }
-                },
-                "fontFamily": {
-                    "displayName": "Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "fontSize": {
-                    "displayName": "Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
-                    }
                 }
             }
         },
         "markers": {
-            "displayName": "Markers",
+            "displayName": "Style",
             "properties": {
                 "colorTheme": {
                     "displayName": "Color Theme",
@@ -182,20 +258,6 @@
                         ]
                     }
                 },
-                "markerHeight": {
-                    "displayName": "Marker Height",
-                    "description": "Height of timeline markers in pixels",
-                    "type": {
-                        "integer": true
-                    }
-                },
-                "padding": {
-                    "displayName": "Padding",
-                    "description": "Vertical padding around markers in pixels, dictating the swimlane height",
-                    "type": {
-                        "integer": true
-                    }
-                },
                 "crossFilter": {
                     "displayName": "Cross-filter other visuals",
                     "description": "When enabled, selecting a marker will filter other visuals on the report page",
@@ -220,22 +282,6 @@
                     "type": {
                         "bool": true
                     }
-                },
-                "fontFamily": {
-                    "displayName": "Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "fontSize": {
-                    "displayName": "Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
-                    }
                 }
             }
         },
@@ -254,22 +300,6 @@
                     "type": {
                         "integer": true
                     }
-                },
-                "fontFamily": {
-                    "displayName": "Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "fontSize": {
-                    "displayName": "Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
-                    }
                 }
             }
         },
@@ -277,7 +307,7 @@
             "displayName": "Content",
             "properties": {
                 "showFieldNames": {
-                    "displayName": "Show field names",
+                    "displayName": "Show Field Names",
                     "description": "Show field names in the content section",
                     "type": {
                         "bool": true
@@ -299,45 +329,6 @@
                     "description": "Initial width of the details panel in pixels",
                     "type": {
                         "integer": true
-                    }
-                },
-                "padding": {
-                    "displayName": "Padding",
-                    "description": "Padding inside the details panel in pixels",
-                    "type": {
-                        "integer": true
-                    }
-                },
-                "headerFontFamily": {
-                    "displayName": "Header Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "headerFontSize": {
-                    "displayName": "Header Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
-                    }
-                },
-                "fontFamily": {
-                    "displayName": "Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "fontSize": {
-                    "displayName": "Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
                     }
                 },
                 "emptyMessage": {
@@ -364,22 +355,6 @@
                     "type": {
                         "bool": true
                     }
-                },
-                "fontFamily": {
-                    "displayName": "Font Family",
-                    "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
-                    }
-                },
-                "fontSize": {
-                    "displayName": "Font Size",
-                    "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
-                    }
                 }
             }
         },
@@ -392,28 +367,50 @@
                     "type": {
                         "bool": true
                     }
+                }
+            }
+        },
+        "topLevelGroupCard": {
+            "displayName": "Top Level Group",
+            "properties": {
+                "show": {
+                    "displayName": "Show",
+                    "description": "Show or hide the top-level group dropdown in the toolbar",
+                    "type": {
+                        "bool": true
+                    }
                 },
-                "padding": {
-                    "displayName": "Padding",
-                    "description": "Padding around the toolbar in pixels",
+                "maxDistinctItems": {
+                    "displayName": "Max distinct items",
+                    "description": "Maximum number of distinct items before showing the overflow message",
                     "type": {
                         "integer": true
                     }
                 },
-                "fontFamily": {
-                    "displayName": "Font Family",
+                "overflowMessage": {
+                    "displayName": "Overflow message",
+                    "description": "Set the text of the overflow message",
                     "type": {
-                        "formatting": {
-                            "fontFamily": true
-                        }
+                        "text": true
+                    }
+                }
+            }
+        },
+        "miscellaneous": {
+            "displayName": "Miscellaneous",
+            "properties": {
+                "collapseSubgroupsOnLoad": {
+                    "displayName": "Collapse subgroups on load",
+                    "description": "Collapse subgroups by default when the visual loads",
+                    "type": {
+                        "bool": true
                     }
                 },
-                "fontSize": {
-                    "displayName": "Font Size",
+                "crossFilter": {
+                    "displayName": "Cross-filter other visuals",
+                    "description": "When enabled, selecting a marker will filter other visuals on the report page",
                     "type": {
-                        "formatting": {
-                            "fontSize": true
-                        }
+                        "bool": true
                     }
                 }
             }

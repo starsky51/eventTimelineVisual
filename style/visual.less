@@ -63,7 +63,7 @@
     overflow: hidden;
     position: relative;
     box-sizing: border-box;
-    font-family: 'Segoe UI', 'wf_segoe-ui_normal', helvetica, arial, sans-serif;
+    font-family: var(--globalFontFamily, 'Segoe UI', 'wf_segoe-ui_normal', helvetica, arial, sans-serif);
 }
 
 /* 4. Top Navigation and Filter Bar */
@@ -429,7 +429,7 @@
             display: flex;
             align-items: center;
             padding: 0 6px;
-            font-size: 11px;
+            font-size: var(--itemFontSize, var(--xAxisFontSize, 11px));
             font-weight: 500;
             color: #ffffff;
             white-space: nowrap;
@@ -642,6 +642,54 @@
 
                 &.selected-dashed {
                     border: 2px dashed #0078d4 !important;
+                }
+            }
+
+            &.is-ongoing {
+                border-top-right-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+                border-right: none !important;
+                min-width: 14px !important;
+                clip-path: polygon(
+                    0% 0%,
+                    calc(100% - 4px) 0%,
+                    100% 12.5%,
+                    calc(100% - 4px) 25%,
+                    100% 37.5%,
+                    calc(100% - 4px) 50%,
+                    100% 62.5%,
+                    calc(100% - 4px) 75%,
+                    100% 87.5%,
+                    calc(100% - 4px) 100%,
+                    0% 100%
+                ) !important;
+                -webkit-clip-path: polygon(
+                    0% 0%,
+                    calc(100% - 4px) 0%,
+                    100% 12.5%,
+                    calc(100% - 4px) 25%,
+                    100% 37.5%,
+                    calc(100% - 4px) 50%,
+                    100% 62.5%,
+                    calc(100% - 4px) 75%,
+                    100% 87.5%,
+                    calc(100% - 4px) 100%,
+                    0% 100%
+                ) !important;
+
+                &:hover,
+                &.details-hover-glow {
+                    filter: drop-shadow(0 0 4px #f59e0b) !important;
+                }
+
+                &.vis-selected,
+                &.cross-highlight-selected,
+                &.selected-primary,
+                &.selected-dashed {
+                    border-top-right-radius: 0 !important;
+                    border-bottom-right-radius: 0 !important;
+                    border-right: none !important;
+                    filter: drop-shadow(0 0 4px #0078d4) !important;
                 }
             }
 
@@ -1028,7 +1076,8 @@
 
 /* 8. General vis-timeline Elements */
 .vis-timeline {
-    font-size: small;
+    font-size: var(--globalBaseFontSize, 11px);
+    font-family: var(--globalFontFamily, inherit);
     background-color: #ffffff;
 }
 
@@ -1138,7 +1187,7 @@
     flex-shrink: 0;
     position: relative;
     z-index: 15;
-    font-family: 'Segoe UI', 'wf_segoe-ui_normal', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: var(--globalFontFamily, 'Segoe UI', 'wf_segoe-ui_normal', -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif);
     user-select: text !important;
     -webkit-user-select: text !important;
 
@@ -1230,11 +1279,13 @@
         transition: box-shadow 0.15s ease, border-color 0.15s ease;
         font-family: var(--detailsFontFamily, inherit);
 
-        &:hover {
+        &:hover,
+        &.hover-glow {
             box-shadow: 0 0 0 2px #f59e0b, 0 4px 14px rgba(245, 158, 11, 0.25) !important;
         }
 
-        &.is-selected:hover {
+        &.is-selected:hover,
+        &.is-selected.hover-glow {
             box-shadow: 0 0 0 2px #0078d4, 0 0 0 4px #f59e0b, 0 4px 14px rgba(245, 158, 11, 0.3) !important;
         }
 
@@ -1242,7 +1293,8 @@
             border: 2px solid #f59e0b !important;
             box-shadow: 0 2px 8px rgba(245, 158, 11, 0.28) !important;
 
-            &:hover {
+            &:hover,
+            &.hover-glow {
                 box-shadow: 0 0 0 2px #f59e0b, 0 4px 14px rgba(245, 158, 11, 0.35) !important;
             }
 
@@ -1251,7 +1303,8 @@
                 box-shadow: 0 0 0 2px #0078d4, 0 3px 10px rgba(0, 120, 212, 0.35) !important;
             }
 
-            &.is-selected:hover {
+            &.is-selected:hover,
+            &.is-selected.hover-glow {
                 border: 2px solid #f59e0b !important;
                 box-shadow: 0 0 0 2px #0078d4, 0 0 0 4px #f59e0b, 0 4px 14px rgba(245, 158, 11, 0.35) !important;
             }
@@ -2032,3 +2085,5 @@ div.vis-tooltip,
         box-shadow: none !important;
     }
 }
+
+.vis-axis {visibility: hidden;}
